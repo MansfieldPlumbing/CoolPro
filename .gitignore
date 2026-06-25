@@ -5,7 +5,9 @@ package-lock.json
 
 # local smoke-test scaffolding
 .smoke.mjs
+.smoke2.mjs
 .dbg.mjs
+.gen-icons.mjs
 .scratch/
 
 # os

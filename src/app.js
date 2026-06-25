@@ -6,16 +6,23 @@ import { importFiles } from './media.js';
 import { initTimeline } from './timeline.js';
 import { initPreview, play, pause, toggle, seek, toStart, toEnd } from './preview.js';
 import { initPanels, openExport } from './panels.js';
+import { initAddons } from './addons.js';
+import { initPWA } from './pwa.js';
+import * as CDN from './cdn.js';
 import { toast } from './hud.js';
 
 function boot() {
   initTimeline();
   initPreview();
   initPanels();
+  initAddons();
   wireMediaBin();
   wireTopbar();
   wireTransport();
   wireKeyboard();
+  // PWA install/update + CDN package cache
+  initPWA(({ canInstall }) => { if (canInstall !== undefined) $('#btnInstall').hidden = !canInstall; });
+  CDN.init().catch(() => {});
   // restore any saved project
   S.load().then((ok) => { if (ok) { renderBin(); toast('Restored your last project'); } });
   S.subscribe((r) => { if (['media','load'].includes(r)) renderBin(); if (r === 'transport' || r === 'load') renderTransport(); if (r === 'project') $('#projName').value = S.state.project.name; });
@@ -49,6 +56,7 @@ function renderBin() {
 
 // ---- top bar ------------------------------------------------------------
 function wireTopbar() {
+  $('#btnInstall').addEventListener('click', () => import('./pwa.js').then((m) => m.promptInstall()));
   $('#projName').addEventListener('change', (e) => S.setProject({ name: e.target.value || 'Untitled project' }));
   $('#btnSave').addEventListener('click', async () => { try { await S.save(); toast('Project saved to browser storage'); } catch (e) { toast('Save failed: ' + e.message, { err: true }); } });
   $('#btnExport').addEventListener('click', openExport);

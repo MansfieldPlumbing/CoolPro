@@ -6,6 +6,7 @@
 //        provider seam is here so it can replace the capture path.
 import * as S from './store.js';
 import { ctx as audioCtx, master } from './audio.js';
+import { importModule } from './cdn.js';
 import { progress, toast } from './hud.js';
 
 const _bufCache = new Map();   // mediaId -> AudioBuffer
@@ -108,7 +109,7 @@ function encodeWav(audioBuffer) {
 let _lame = null;
 async function encodeMp3(audioBuffer) {
   if (!_lame) {
-    const mod = await import(/* @vite-ignore */ 'https://cdn.jsdelivr.net/npm/@breezystack/lamejs@1.2.7/+esm');
+    const mod = await importModule('lamejs');   // managed + cached via the CDN package manager
     _lame = mod.default || mod;
   }
   const sr = audioBuffer.sampleRate, numCh = Math.min(2, audioBuffer.numberOfChannels);
