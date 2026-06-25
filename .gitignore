@@ -1,0 +1,12 @@
+# dev/test tooling (the app ships dependency-free; Playwright is dev-only)
+node_modules/
+package.json
+package-lock.json
+
+# local smoke-test scaffolding
+.smoke.mjs
+.dbg.mjs
+.scratch/
+
+# os
+.DS_Store
