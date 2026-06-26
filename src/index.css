@@ -1,0 +1,65 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Segoe UI Variable Text", "Segoe UI", -apple-system, BlinkMacSystemFont, "Segoe UI Emoji", "Segoe UI Symbol", system-ui, sans-serif;
+  --font-mono: "Segoe UI Mono", "Cascadia Mono", "Fira Code", "Consolas", monospace;
+  --color-fluent-blue: #0078d4;
+  --color-fluent-blue-hover: #1085e0;
+  --color-fluent-blue-light: #60cdff;
+  --color-fluent-bg-acrylic: #1c1c1c;
+  --color-fluent-card: #2b2b2b;
+}
+
+@layer base {
+  body {
+    background-color: #0c0c0c;
+    color: #f3f3f3;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+/* Fluent-style scrollbars */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 9999px;
+  transition: background 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+@layer utilities {
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-none {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+  
+  /* Acrylic / Mica material simulation */
+  .acrylic-dark {
+    background-color: rgba(26, 26, 26, 0.85);
+    backdrop-filter: blur(20px) saturate(125%);
+    -webkit-backdrop-filter: blur(20px) saturate(125%);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .acrylic-card {
+    background-color: rgba(45, 45, 45, 0.6);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+}

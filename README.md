@@ -4,9 +4,13 @@
 editor in the browser. The goal: a CapCut / mobile-audio-editor replacement that runs
 entirely on-device, with real on-device AI (no accounts, no uploads, no backend).
 
-> Decomposed from a minified React/Vite (Google AI Studio) prototype into plain
-> HTML/CSS/JS. The original prototype is kept for reference at
-> [`reference-ai-studio-bundle.html`](reference-ai-studio-bundle.html).
+> Decomposed from the React/Vite (Google AI Studio) "No Cap — Cap Cut Killer"
+> prototype into plain HTML/CSS/JS. The originals are kept in-repo for reference:
+> the React source (`src/App.tsx`, `src/main.tsx`, entry [`index.react.html`](index.react.html)),
+> the Capacitor Android wrapper (`android/`), the AI Studio readme
+> ([`README-ai-studio.md`](README-ai-studio.md)), and the built bundle
+> ([`reference-ai-studio-bundle.html`](reference-ai-studio-bundle.html)).
+> The live app is the vanilla build served from `index.html`.
 
 ## What works today
 
