@@ -1,0 +1,77 @@
+/* ============================================================================
+   nocap — theme contract (design tokens)
+   House style ported from Subsystem's theme.css: named CSS variables only here,
+   every component reads them. Dark editor palette by default.
+   ============================================================================ */
+:root {
+  --bg:        #0b0c10;
+  --surface:   #14161c;
+  --surface-2: #1b1e26;
+  --panel:     #101218;
+  --border:    #272b36;
+  --border-2:  #353b49;
+  --fg:        #e8eaf0;
+  --muted:     #8b93a7;
+  --faint:     #5b6275;
+
+  --accent:    #5b8cff;
+  --accent-2:  #7a6cff;
+  --success:   #3fcf8e;
+  --warning:   #f5b14c;
+  --error:     #ef5e6b;
+
+  --track-video: #2b3a67;
+  --track-audio: #2d5b4e;
+  --clip-video:  #3a63d0;
+  --clip-audio:  #2fa37f;
+  --clip-image:  #b3742f;
+  --playhead:    #ff5a5a;
+
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: "Cascadia Code", "SF Mono", ui-monospace, "Liberation Mono", Menlo, monospace;
+
+  --radius: 8px;
+  --radius-sm: 5px;
+  --r-bar: 52px;        /* top bar height */
+  --r-rail: 56px;       /* timeline ruler height */
+  --shadow: 0 8px 24px rgba(0,0,0,.45);
+}
+
+* { box-sizing: border-box; }
+html, body {
+  margin: 0; padding: 0; height: 100%; width: 100%;
+  background: var(--bg); color: var(--fg);
+  font-family: var(--font-sans); font-size: 14px;
+  overflow: hidden; user-select: none; -webkit-user-select: none;
+  overscroll-behavior: none;
+}
+button { font-family: inherit; color: inherit; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: var(--border-2); border-radius: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* ---- shared atoms ---- */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--surface-2); color: var(--fg);
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 7px 12px; font-size: 13px; cursor: pointer;
+  transition: background .12s, border-color .12s, transform .05s;
+  white-space: nowrap;
+}
+.btn:hover { background: #232733; border-color: var(--border-2); }
+.btn:active { transform: translateY(1px); }
+.btn.primary { background: linear-gradient(180deg, var(--accent), #466fe0); border-color: #3a5fce; color: #fff; }
+.btn.primary:hover { filter: brightness(1.07); }
+.btn.ghost { background: transparent; border-color: transparent; }
+.btn.ghost:hover { background: var(--surface-2); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn .ico { width: 16px; height: 16px; display: inline-block; }
+
+.chip {
+  font-size: 11px; color: var(--muted); background: var(--surface-2);
+  border: 1px solid var(--border); border-radius: 999px; padding: 2px 9px;
+}
+.badge-soon { font-size: 10px; letter-spacing: .04em; text-transform: uppercase;
+  color: var(--warning); border: 1px solid color-mix(in srgb, var(--warning) 45%, transparent);
+  border-radius: 999px; padding: 1px 7px; }
