@@ -5,7 +5,7 @@
 import { uid, mediaKind } from './util.js';
 import { addMedia, addClipFromMedia } from './store.js';
 import { decode } from './audio.js';
-import { toast } from './hud.js';
+import { toast, progress } from './hud.js';
 
 export async function importFiles(fileList, { autoPlace = true } = {}) {
   const files = [...fileList];
@@ -18,6 +18,42 @@ export async function importFiles(fileList, { autoPlace = true } = {}) {
       console.error(e);
       toast(`Couldn't import ${file.name}: ${e.message}`, { err: true, ms: 3500 });
     }
+  }
+}
+
+// Import a Blob/File directly — the path used by clipboard paste and fetched URLs
+// (the Paint Pro / gallery interchange seam). A bare Blob is wrapped in a File so
+// mediaKind() can read its type, and a sensible extension is appended to the name.
+export async function importBlob(blob, name = 'pasted', { autoPlace = true } = {}) {
+  const type = blob.type || '';
+  const ext = type.includes('/') ? '.' + type.split('/')[1].split('+')[0] : '';
+  const file = blob instanceof File ? blob
+    : new File([blob], /\.\w+$/.test(name) ? name : name + ext, { type });
+  const m = await importFile(file);
+  addMedia(m);
+  if (autoPlace) addClipFromMedia(m.id);
+  return m;
+}
+
+// Import a remote asset by URL (also handles data: URLs, e.g. a Paint Pro export).
+// We fetch to a same-origin blob FIRST so the canvas compositor never taints —
+// drawing a cross-origin <img> straight to canvas would break export.
+export async function importFromUrl(url, { autoPlace = true } = {}) {
+  url = (url || '').trim();
+  if (!url) return null;
+  const pr = progress('Fetching asset…');
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const blob = await res.blob();
+    const name = decodeURIComponent((url.split('/').pop() || 'asset').split('?')[0]) || 'asset';
+    const m = await importBlob(blob, name, { autoPlace });
+    pr.done(`Added ${m.name}`);
+    return m;
+  } catch (e) {
+    console.error(e);
+    pr.fail(`Couldn't load asset: ${e.message}`);
+    return null;
   }
 }
 

@@ -34,7 +34,9 @@
 .side.left { grid-area: left; border-right: 1px solid var(--border); }
 .side.right { grid-area: right; border-left: 1px solid var(--border); }
 .side h3 { margin: 0; padding: 12px 14px 8px; font-size: 11px; text-transform: uppercase;
-  letter-spacing: .07em; color: var(--muted); font-weight: 700; }
+  letter-spacing: .07em; color: var(--muted); font-weight: 700;
+  display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.btn.sm { padding: 2px 8px; font-size: 11px; text-transform: none; letter-spacing: 0; }
 .side .scroll { overflow-y: auto; flex: 1; padding: 0 10px 14px; }
 .tabs { display: flex; gap: 4px; padding: 8px 10px 0; }
 .tab { flex: 1; text-align: center; padding: 7px 4px; font-size: 12px; color: var(--muted);
