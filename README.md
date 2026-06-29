@@ -12,8 +12,13 @@ entirely on-device, with real on-device AI (no accounts, no uploads, no backend)
 
 ## What works today
 
-- **Media bin** — import video / audio / images (file picker or drag-and-drop), with
-  generated thumbnails and audio waveforms.
+- **Media bin** — import video / audio / images (file picker, drag-and-drop, **clipboard
+  paste**, or **by URL / data-URL**), with generated thumbnails and audio waveforms.
+  Legacy containers (AVI/MKV/WMV/…) are **auto-modernized to MP4 on import** so they play.
+- **Audio from video** — pull any clip's audio onto an audio track (🎵 on a video in the bin).
+- **Convert** — a HandBrake-style standalone tool: compress a video **lean & mean**
+  (downscale + CRF presets), **web-optimize** MP4 (`+faststart`), or extract WAV/MP3 audio
+  — reports the real size delta and offers **Download or Share** (Web Share API).
 - **Multi-track timeline** — canvas-rendered video & audio tracks; drag to move,
   edge-drag to trim, click the ruler to scrub, snapping, zoom, split, delete.
 - **Preview** — canvas compositor + Web-Audio playback with per-clip / per-track volume.
@@ -22,8 +27,10 @@ entirely on-device, with real on-device AI (no accounts, no uploads, no backend)
   transcoded by **ffmpeg.wasm**) or fast **WebM**.
 - **Projects** — saved to browser storage (IndexedDB) and restored on reload.
 - **AI layer** — a thin provider abstraction (dp-onnx-ready). Live now: **Smart Auto-Trim**
-  (silence detection, no download). Declared with honest status: captions (Whisper),
-  background removal (RMBG-1.4), voiceover (Kokoro via dp-onnx), and more.
+  (silence detection, no download) and **RIFE frame doubling** (2× fps via an ONNX model
+  in onnxruntime-web — point it at your `rife*.onnx`; ported in spirit from the native
+  `rife_trt` engine). Declared with honest status: captions (Whisper), background removal
+  (RMBG-1.4), voiceover (Kokoro via dp-onnx), and more.
 - **Installable PWA** — install to home screen; **explicit update checking** (a banner
   offers "Update" — you're in control, no surprise reloads).
 - **Full offline** — the entire app shell is precached, so it boots and edits in
@@ -44,8 +51,10 @@ No framework, no bundler. `index.html` loads ES modules from `src/`:
 | `preview.js` | transport, canvas compositor, audio sync |
 | `audio.js` | shared Web-Audio graph (per-element gain → master) |
 | `export.js` | offline mixdown, WAV/MP3 encoders, realtime video capture |
-| `ffmpeg.js` | MP4 (H.264/AAC) transcode via ffmpeg.wasm (vendored glue + CDN core) |
+| `ffmpeg.js` | generic ffmpeg.wasm transcode + MP4 (H.264/AAC) (vendored glue + CDN core) |
+| `convert.js` | standalone HandBrake-style converter (compress / web-optimize / extract audio / share) |
 | `ml.js` | on-device AI provider abstraction + capability catalog |
+| `rife.js` | RIFE frame doubling provider (onnxruntime-web) |
 | `cdn.js` | CDN package registry + warm/uncache into the durable CDN cache |
 | `pwa.js` | service-worker registration, install prompt, update checking |
 | `addons.js` | Add-ons modal: manage CDN packages, install, check updates |

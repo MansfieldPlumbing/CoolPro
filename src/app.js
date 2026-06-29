@@ -8,6 +8,7 @@ import { initPreview, play, pause, toggle, seek, toStart, toEnd } from './previe
 import { initPanels, openExport } from './panels.js';
 import { initAddons } from './addons.js';
 import { initConvert } from './convert.js';
+import { initRife } from './rife.js';
 import { initPWA } from './pwa.js';
 import * as CDN from './cdn.js';
 import { toast } from './hud.js';
@@ -18,6 +19,7 @@ function boot() {
   initPanels();
   initAddons();
   initConvert();
+  initRife();
   wireMediaBin();
   wirePaste();
   wireTopbar();
