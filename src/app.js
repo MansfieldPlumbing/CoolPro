@@ -2,11 +2,12 @@
 // media bin, top bar, transport, keyboard shortcuts, persistence.
 import { $, $$, fmtTime } from './util.js';
 import * as S from './store.js';
-import { importFiles, importBlob, importFromUrl } from './media.js';
+import { importFiles, importBlob, importFromUrl, extractAudioToBin } from './media.js';
 import { initTimeline } from './timeline.js';
 import { initPreview, play, pause, toggle, seek, toStart, toEnd } from './preview.js';
 import { initPanels, openExport } from './panels.js';
 import { initAddons } from './addons.js';
+import { initConvert } from './convert.js';
 import { initPWA } from './pwa.js';
 import * as CDN from './cdn.js';
 import { toast } from './hud.js';
@@ -16,6 +17,7 @@ function boot() {
   initPreview();
   initPanels();
   initAddons();
+  initConvert();
   wireMediaBin();
   wirePaste();
   wireTopbar();
@@ -80,8 +82,15 @@ function renderBin() {
     <div class="item" data-id="${m.id}" title="Click to add to timeline">
       ${m.thumbUrl ? `<img src="${m.thumbUrl}" alt="">` : `<div style="display:grid;place-items:center;height:100%;color:var(--muted)">${m.kind}</div>`}
       <span class="k">${m.kind}</span><span class="lbl">${esc(m.name)}</span>
+      ${m.kind === 'video' ? `<button class="item-act" data-audio="${m.id}" title="Extract this video's audio to an audio track">🎵</button>` : ''}
     </div>`).join('');
   $$('.item', bin).forEach((it) => it.addEventListener('click', () => { S.addClipFromMedia(it.dataset.id); toast('Added to timeline'); }));
+  $$('[data-audio]', bin).forEach((b) => b.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const m = S.media.get(b.dataset.audio);
+    if (m?.file) extractAudioToBin(m.file);
+    else toast('Original file unavailable for extraction', { err: true });
+  }));
 }
 
 // ---- top bar ------------------------------------------------------------

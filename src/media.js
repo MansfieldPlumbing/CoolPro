@@ -11,7 +11,10 @@ export async function importFiles(fileList, { autoPlace = true } = {}) {
   const files = [...fileList];
   for (const file of files) {
     try {
-      const m = await importFile(file);
+      // AVI / legacy triage: browsers can't decode AVI/MKV/WMV/… in <video>, so a
+      // straight import would be a silent black clip. Modernize to MP4 on the way in.
+      const f = isLegacyVideo(file) ? await triageToMp4(file) : file;
+      const m = await importFile(f);
       addMedia(m);
       if (autoPlace) addClipFromMedia(m.id);
     } catch (e) {
@@ -20,6 +23,51 @@ export async function importFiles(fileList, { autoPlace = true } = {}) {
     }
   }
 }
+
+// Containers no mainstream browser plays natively in <video>/<audio>.
+const LEGACY_VIDEO = ['avi', 'mkv', 'flv', 'wmv', 'mpg', 'mpeg', 'm2ts', 'mts', 'ts', 'vob', 'ogv', '3gp', 'divx', 'rm', 'rmvb', 'asf', 'f4v'];
+function isLegacyVideo(file) {
+  if (mediaKind(file) !== 'video') return false;
+  const ext = (file.name || '').toLowerCase().split('.').pop();
+  if (LEGACY_VIDEO.includes(ext)) return true;
+  return /(x-msvideo|x-matroska|x-flv|x-ms-wmv|x-ms-asf|mpeg|vnd\.rn-realmedia)/.test((file.type || '').toLowerCase());
+}
+
+// Legacy → modern loop: transcode anything browsers can't play into web-ready MP4.
+async function triageToMp4(file) {
+  const pr = progress(`Modernizing ${file.name} (legacy → MP4)…`);
+  try {
+    const { transcode } = await import('./ffmpeg.js');
+    const blob = await transcode(file, {
+      outName: 'output.mp4', mime: 'video/mp4', onStatus: pr.status,
+      args: ['-i', 'input', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23',
+        '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '160k', '-movflags', '+faststart', 'output.mp4'],
+    });
+    pr.done('Modernized to MP4');
+    return new File([blob], baseName(file.name) + '.mp4', { type: 'video/mp4' });
+  } catch (e) { pr.fail(`Couldn't modernize: ${e.message}`); throw e; }
+}
+
+// Pull a video's (or another file's) audio track into the bin as an audio asset,
+// so you can drop a different video's audio onto an audio track. WAV by default.
+export async function extractAudioToBin(file, fmt = 'wav', { autoPlace = true } = {}) {
+  const pr = progress(`Extracting audio from ${file.name}…`);
+  try {
+    const { transcode } = await import('./ffmpeg.js');
+    const mp3 = fmt === 'mp3';
+    const blob = await transcode(file, {
+      outName: `output.${fmt}`, mime: mp3 ? 'audio/mpeg' : 'audio/wav', onStatus: pr.status,
+      args: mp3
+        ? ['-i', 'input', '-vn', '-c:a', 'libmp3lame', '-b:a', '256k', `output.${fmt}`]
+        : ['-i', 'input', '-vn', '-c:a', 'pcm_s16le', `output.${fmt}`],
+    });
+    const m = await importBlob(blob, `${baseName(file.name)} audio.${fmt}`, { autoPlace });
+    pr.done('Audio added');
+    return m;
+  } catch (e) { console.error(e); pr.fail(`Couldn't extract audio: ${e.message}`); return null; }
+}
+
+const baseName = (n) => (n || 'asset').replace(/\.[^.]+$/, '');
 
 // Import a Blob/File directly — the path used by clipboard paste and fetched URLs
 // (the Paint Pro / gallery interchange seam). A bare Blob is wrapped in a File so

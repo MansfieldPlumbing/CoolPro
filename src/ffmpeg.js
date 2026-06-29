@@ -38,21 +38,27 @@ export async function loadFFmpeg(onStatus) {
   return _loading;
 }
 
-// Transcode a recorded blob (WebM from MediaRecorder) to H.264/AAC MP4.
-export async function transcodeToMp4(blob, { onStatus } = {}) {
+// Generic transcode: write `file` (Blob/File/Uint8Array) as 'input', run ffmpeg
+// with `args` (which must reference 'input' and produce `outName`), and return the
+// result as a Blob of `mime`. The standalone converter (convert.js) and the timeline
+// MP4 export both build on this.
+export async function transcode(file, { args, outName, mime, onStatus } = {}) {
   const ff = await loadFFmpeg(onStatus);
   const { fetchFile } = await import('../vendor/ffmpeg-util/index.js');
-  const inName = 'input', outName = 'output.mp4';
-  await ff.writeFile(inName, await fetchFile(blob));
-  onStatus?.('Transcoding to MP4…', 0);
-  await ff.exec([
-    '-i', inName,
-    '-c:v', 'libx264', '-preset', 'veryfast', '-pix_fmt', 'yuv420p', '-crf', '23',
-    '-c:a', 'aac', '-b:a', '192k',
-    '-movflags', '+faststart',
-    outName,
-  ]);
+  await ff.writeFile('input', await fetchFile(file));
+  onStatus?.('Transcoding…', 0);
+  await ff.exec(args);
   const data = await ff.readFile(outName);
-  try { await ff.deleteFile(inName); await ff.deleteFile(outName); } catch (_) {}
-  return new Blob([data.buffer], { type: 'video/mp4' });
+  try { await ff.deleteFile('input'); await ff.deleteFile(outName); } catch (_) {}
+  return new Blob([data.buffer], { type: mime });
+}
+
+// Transcode a recorded blob (WebM from MediaRecorder) to H.264/AAC MP4.
+export function transcodeToMp4(blob, { onStatus } = {}) {
+  return transcode(blob, {
+    outName: 'output.mp4', mime: 'video/mp4', onStatus,
+    args: ['-i', 'input',
+      '-c:v', 'libx264', '-preset', 'veryfast', '-pix_fmt', 'yuv420p', '-crf', '23',
+      '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', 'output.mp4'],
+  });
 }

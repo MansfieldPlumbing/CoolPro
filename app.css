@@ -53,6 +53,10 @@
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bin .item .k { position: absolute; top: 4px; left: 4px; font-size: 9px; text-transform: uppercase;
   background: rgba(0,0,0,.55); padding: 1px 5px; border-radius: 4px; }
+.bin .item .item-act { position: absolute; top: 3px; right: 3px; border: 0; cursor: pointer;
+  background: rgba(0,0,0,.55); color: #fff; font-size: 11px; line-height: 1; padding: 3px 5px;
+  border-radius: 4px; opacity: 0; transition: opacity .12s; }
+.bin .item:hover .item-act { opacity: 1; }
 .dropzone { border: 1.5px dashed var(--border-2); border-radius: var(--radius); padding: 22px 10px;
   text-align: center; color: var(--muted); font-size: 12px; cursor: pointer; margin: 6px 0 12px; }
 .dropzone.drag { border-color: var(--accent); color: var(--fg); background: color-mix(in srgb, var(--accent) 10%, transparent); }
