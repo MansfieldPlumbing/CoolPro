@@ -55,6 +55,15 @@
           <header class="ed-deck acrylic">
             <input id="projName" class="proj-name" value="Untitled project" spellcheck="false" />
             <div class="spacer"></div>
+            <!-- projections (Blackmagic Resolve pages): one project, several rooms. Each rearranges the
+                 same panes — Edit (timeline up) · Wide (no side panels) · Preview (timeline down to a
+                 grip, the preview takes the whole pasteboard). -->
+            <div id="edProj" class="proj-switch" role="tablist" aria-label="Projection">
+              <button data-proj="edit" class="on">Edit</button>
+              <button data-proj="wide">Wide</button>
+              <button data-proj="preview">Preview</button>
+            </div>
+            <div class="spacer"></div>
             <button id="btnSave" class="ribbon-btn icon" title="Save project to browser storage"><span class="nf">&#xf0c7;</span></button>
             <button id="btnExport" class="ribbon-btn primary" title="Export"><span class="nf">&#xf019;</span><span class="lbl">Export</span></button>
             <button id="edMore" class="ribbon-btn icon" title="More" aria-haspopup="true"><span class="nf">&#xf142;</span></button>
@@ -74,9 +83,17 @@
             <input id="filePicker" type="file" accept="video/*,audio/*,image/*" multiple hidden />
           </aside>
 
-          <!-- center: preview -->
+          <!-- center: preview — reuses flickpaint's pasteboard (infinite checker + framed artboard).
+               The canvas is the artboard; #previewStage is the pan/zoom transform host. -->
           <main class="stage">
-            <div class="viewport"><canvas id="preview" width="1280" height="720"></canvas></div>
+            <div class="viewport pasteboard">
+              <div id="previewStage" class="preview-stage"><canvas id="preview" width="1280" height="720"></canvas></div>
+              <div class="pv-zoom">
+                <button id="pvZoomOut" title="Zoom out">－</button>
+                <button id="pvZoomFit" title="Fit to view">⊡</button>
+                <button id="pvZoomIn" title="Zoom in">＋</button>
+              </div>
+            </div>
             <div class="transport">
               <div class="time"><b id="tCur">0:00.00</b> / <span id="tDur">0:00.00</span></div>
               <button id="btnToStart" class="tbtn" title="To start">⏮</button>
@@ -104,8 +121,10 @@
             </div>
           </aside>
 
-          <!-- bottom: timeline -->
+          <!-- bottom: timeline — a bring-up pane. The grip is the always-visible handle (flickpaint
+               bottom-tab): tap it to drop the timeline to a strip (Preview) or bring it back (Edit). -->
           <section class="timeline">
+            <button class="tl-grip" id="tlGrip" title="Bring the timeline up / down" aria-label="Toggle timeline"><span class="tl-grip-bar"></span></button>
             <div class="tl-toolbar">
               <button id="btnAddVideoTrack" class="btn ghost" title="Add video track">＋ Video track</button>
               <button id="btnAddAudioTrack" class="btn ghost" title="Add audio track">＋ Audio track</button>

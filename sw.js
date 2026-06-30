@@ -8,7 +8,7 @@
         known CDN hosts are auto-cached on first network hit.
    Update flow is explicit: we do NOT skipWaiting on install — the page detects the
    waiting worker and offers "Update", then posts SKIP_WAITING. */
-const VERSION = 'coolpro-v7';
+const VERSION = 'coolpro-v8';
 const APP_CACHE = VERSION;
 const CDN_CACHE = 'nocap-cdn';      // stable bucket name (NOT version-suffixed): survives app updates
 const SHARE_CACHE = 'coolpro-share'; // transient: Android share-target hand-off, drained on boot

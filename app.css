@@ -77,6 +77,30 @@
 /* phone/desktop layout is driven by :root[data-vp] (src/viewport.js), not a raw media query —
    one form-factor signal, see the "phone" section at the bottom of this file. */
 
+/* ---- projections (Blackmagic Resolve pages): one project, several rooms. Each value of
+   data-projection rearranges the SAME panes — no DOM swap, just grid reflow. ---- */
+#app { transition: grid-template-rows .34s cubic-bezier(.2,.85,.25,1), grid-template-columns .34s cubic-bezier(.2,.85,.25,1); }
+/* both form factors: Wide & Preview drop the side panels (on phone their stacked rows then collapse). */
+#app[data-projection="wide"]    .side,
+#app[data-projection="preview"] .side { display: none; }
+/* desktop: collapse the side columns; Preview also drops the timeline row to its grip. */
+:root[data-vp="desktop"] #app[data-projection="wide"]    { grid-template-columns: 0 minmax(0,1fr) 0; }
+:root[data-vp="desktop"] #app[data-projection="preview"] { grid-template-columns: 0 minmax(0,1fr) 0;
+  grid-template-rows: var(--r-bar) minmax(0,1fr) 30px var(--r-status); }
+/* phone (6-area scroll column): Preview drops the timeline row to its grip; hidden sides self-collapse.
+   The phone min-height on .timeline would otherwise defeat the collapse, so override it here. */
+:root[data-vp="phone"] #app[data-projection="preview"] {
+  grid-template-rows: var(--r-bar) 56vh 30px auto auto var(--r-status); }
+:root[data-vp="phone"] #app[data-projection="preview"] .timeline { min-height: 30px; }
+
+/* projection switcher (deck) — segmented pill */
+.proj-switch { display: inline-flex; gap: 2px; padding: 3px; border-radius: 999px;
+  background: rgba(255,255,255,.05); border: 1px solid var(--border); }
+.proj-switch button { padding: 4px 12px; border: 0; border-radius: 999px; background: transparent;
+  color: var(--muted); font-size: 12px; cursor: pointer; transition: background .12s, color .12s; }
+.proj-switch button:hover { color: var(--fg); }
+.proj-switch button.on { background: color-mix(in srgb, var(--accent) 24%, transparent); color: var(--fg); }
+
 /* ---- editor command deck (flickpaint-shaped, .acrylic supplies the frosted glass) ---- */
 .ed-deck { grid-area: topbar; display: flex; align-items: center; gap: 6px; padding: 0 10px;
   border-bottom: 1px solid var(--border); position: relative; z-index: 30;
@@ -176,11 +200,24 @@
   background: var(--surface); border: 1px solid var(--border); color: var(--fg);
   border-radius: var(--radius-sm); padding: 7px 8px; font-size: 13px; }
 
-/* ---- stage / preview ---- */
+/* ---- stage / preview — reuses flickpaint's pasteboard (infinite checker + framed artboard) ---- */
 .stage { grid-area: stage; display: flex; flex-direction: column; background: var(--bg); min-width: 0; }
-.viewport { flex: 1; display: grid; place-items: center; padding: 14px; min-height: 0; }
-#preview { max-width: 100%; max-height: 100%; background: #000; border-radius: var(--radius);
-  box-shadow: var(--shadow); }
+.viewport { flex: 1; position: relative; overflow: hidden; min-height: 0; }
+.viewport.pasteboard { background-color: #2b2b2e;
+  background-image:
+    linear-gradient(45deg,#34343a 25%,transparent 25%,transparent 75%,#34343a 75%,#34343a),
+    linear-gradient(45deg,#34343a 25%,transparent 25%,transparent 75%,#34343a 75%,#34343a);
+  background-size: 36px 36px; background-position: 0 0, 18px 18px; touch-action: none; }
+.preview-stage { position: absolute; inset: 0; display: grid; place-items: center; padding: 18px;
+  transform-origin: center center; will-change: transform; }
+#preview { max-width: 100%; max-height: 100%; background: #000; border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(255,255,255,.14), 0 24px 60px -12px rgba(0,0,0,.8); }
+/* zoom HUD — pinchless, thumb-friendly (the pasteboard's explicit zoom controls) */
+.pv-zoom { position: absolute; right: 12px; bottom: 12px; z-index: 5; display: flex; gap: 4px; }
+.pv-zoom button { width: 34px; height: 34px; border-radius: 9px; border: 1px solid var(--border);
+  background: var(--glass); color: var(--fg); font-size: 16px; cursor: pointer; line-height: 1;
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+.pv-zoom button:hover { background: var(--surface-2); }
 .transport { display: flex; align-items: center; gap: 12px; padding: 8px 14px;
   background: var(--surface); border-top: 1px solid var(--border); }
 .transport .time { font-family: var(--font-mono); font-size: 13px; color: var(--muted); min-width: 132px; }
@@ -190,9 +227,15 @@
 .tbtn.play { width: 44px; height: 44px; background: var(--accent); border-color: var(--accent); color: #fff; }
 .transport .spacer { flex: 1; }
 
-/* ---- timeline ---- */
+/* ---- timeline (a bring-up pane) ---- */
 .timeline { grid-area: timeline; background: var(--surface); border-top: 1px solid var(--border);
-  display: flex; flex-direction: column; min-height: 0; }
+  display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.tl-grip { flex-shrink: 0; height: 30px; width: 100%; display: grid; place-items: center; cursor: pointer;
+  background: transparent; border: 0; border-bottom: 1px solid var(--border); }
+.tl-grip:hover { background: var(--surface-2); }
+.tl-grip-bar { width: 42px; height: 4px; border-radius: 999px; background: var(--border-2); display: block;
+  transition: background .12s; }
+.tl-grip:hover .tl-grip-bar { background: var(--accent); }
 .tl-toolbar { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-bottom: 1px solid var(--border); }
 .tl-toolbar .spacer { flex: 1; }
 .tl-zoom { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; }
@@ -296,6 +339,11 @@
 :root[data-vp="phone"] .app-tab { padding: 7px 9px; }
 :root[data-vp="phone"] .app-tab .nm { display: none; }     /* icon-only rail */
 :root[data-vp="phone"] .shell-menu { display: none; }      /* guest menus live in-frame on phone */
+
+/* deck on phone: keep project name + projection switch + actions on one line (let name shrink) */
+:root[data-vp="phone"] .ed-deck { gap: 4px; padding: 0 6px; }
+:root[data-vp="phone"] .proj-name { min-width: 0; flex: 0 1 78px; }
+:root[data-vp="phone"] .proj-switch button { padding: 4px 8px; font-size: 11px; }
 
 :root[data-vp="phone"] #surface-editor { overflow: hidden; }
 :root[data-vp="phone"] #app {

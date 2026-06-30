@@ -21,6 +21,7 @@ function boot() {
   wireMediaBin();
   wireTopbar();
   wireDeckMenu();
+  wireProjections();
   wireTransport();
   wireKeyboard();
   // PWA install/update + CDN package cache
@@ -58,6 +59,26 @@ function wireDeckMenu() {
     return list;
   };
   more.addEventListener('click', () => { const r = more.getBoundingClientRect(); openMenu(r.right - 8, r.bottom + 4, items()); });
+}
+
+// ---- projections (Blackmagic Resolve pages): set #app[data-projection]; the timeline grip is the
+// quick bring-up / drop-down. The grid reflows; the canvas timeline + preview repaint to fit. ----
+const PROJECTIONS = ['edit', 'wide', 'preview'];
+function wireProjections() {
+  const app = $('#app'), sw = $('#edProj'), grip = $('#tlGrip');
+  if (!app) return;
+  let cur = localStorage.getItem('coolpro-projection');
+  if (!PROJECTIONS.includes(cur)) cur = 'edit';
+  const set = (p) => {
+    if (!PROJECTIONS.includes(p)) return;
+    cur = p; app.dataset.projection = p;
+    try { localStorage.setItem('coolpro-projection', p); } catch (_) {}
+    if (sw) $$('button', sw).forEach((b) => b.classList.toggle('on', b.dataset.proj === p));
+    requestAnimationFrame(() => { renderTimeline(); drawAt(S.state.transport.time); });
+  };
+  if (sw) $$('button', sw).forEach((b) => b.addEventListener('click', () => set(b.dataset.proj)));
+  if (grip) grip.addEventListener('click', () => set(cur === 'preview' ? 'edit' : 'preview'));
+  set(cur);
 }
 
 // ---- status bar: selection on the left, project facts on the right ----
