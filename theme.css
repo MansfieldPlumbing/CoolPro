@@ -16,9 +16,17 @@
 
   --accent:    #5b8cff;
   --accent-2:  #7a6cff;
+  --accent-fg: #ffffff;     /* readable foreground ON the accent (obp contract) */
+  --neon:      #5bffd0;
   --success:   #3fcf8e;
   --warning:   #f5b14c;
   --error:     #ef5e6b;
+
+  /* glass / mica (obp surfaces): a translucent panel that reads as frosted chrome */
+  --mica-rgb:    20 22 28;
+  --mica-opacity: .72;
+  --transparency: 1;
+  --glass: rgba(var(--mica-rgb), calc(var(--mica-opacity) * var(--transparency)));
 
   --track-video: #2b3a67;
   --track-audio: #2d5b4e;
@@ -33,10 +41,21 @@
   --radius: 8px;
   --radius-sm: 5px;
   --r-shell: 46px;      /* shell app-switcher bar height */
-  --r-bar: 52px;        /* editor top bar height */
+  --r-bar: 48px;        /* editor command-ribbon height */
+  --r-status: 26px;     /* editor status bar height */
   --r-rail: 56px;       /* timeline ruler height */
   --shadow: 0 8px 24px rgba(0,0,0,.45);
 }
+
+/* NF glyph icons (the obp icon vocabulary): CaskaydiaCove/Cascadia Nerd Font, no icon library.
+   Already vendored for the guests; loaded here so the editor chrome can use the same glyphs. */
+@font-face {
+  font-family: 'CascadiaNF';
+  src: url('vendor/ui/fonts/CascadiaCodeNF.ttf') format('truetype');
+  font-display: swap;
+}
+.nf { font-family: 'CascadiaNF', var(--font-mono); font-style: normal; font-weight: 400;
+  line-height: 1; display: inline-flex; align-items: center; justify-content: center; }
 
 * { box-sizing: border-box; }
 html, body {
