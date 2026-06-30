@@ -35,7 +35,7 @@ export function initPWA(stateHook) {
     e.preventDefault(); deferredPrompt = e; onState({ canInstall: true });
   });
   window.addEventListener('appinstalled', () => {
-    deferredPrompt = null; onState({ canInstall: false }); toast('nocap installed');
+    deferredPrompt = null; onState({ canInstall: false }); toast('CoolPro installed');
   });
 }
 
@@ -69,7 +69,7 @@ function showUpdate() {
   banner = document.createElement('div');
   banner.className = 'toast';
   banner.style.pointerEvents = 'auto';
-  banner.innerHTML = `<span>A new version of nocap is ready.</span>`;
+  banner.innerHTML = `<span>A new version of CoolPro is ready.</span>`;
   const btn = document.createElement('button');
   btn.className = 'btn primary'; btn.style.padding = '4px 10px'; btn.textContent = 'Update';
   btn.onclick = applyUpdate;

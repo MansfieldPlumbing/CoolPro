@@ -46,7 +46,7 @@ async function render() {
   body.innerHTML = `
     <!-- app / PWA -->
     <div class="fx-row" style="align-items:flex-start">
-      <div class="t"><b>This app</b><span>Install nocap & check for updates. Updating keeps your cached add-ons. ${usage}.</span></div>
+      <div class="t"><b>This app</b><span>Install CoolPro & check for updates. Updating keeps your cached add-ons. ${usage}.</span></div>
       <div style="display:flex;gap:6px;flex-shrink:0">
         <button class="btn ${PWA.canInstall() ? 'primary' : ''}" id="aoInstall" ${PWA.canInstall() ? '' : 'disabled'}>Install</button>
         <button class="btn ghost" id="aoUpdate">Check updates</button>

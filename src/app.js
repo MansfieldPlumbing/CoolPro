@@ -3,8 +3,9 @@
 import { $, $$, fmtTime } from './util.js';
 import * as S from './store.js';
 import { importFiles } from './media.js';
-import { initTimeline } from './timeline.js';
-import { initPreview, play, pause, toggle, seek, toStart, toEnd } from './preview.js';
+import { initTimeline, render as renderTimeline } from './timeline.js';
+import { initPreview, play, pause, toggle, seek, toStart, toEnd, drawAt } from './preview.js';
+import { subscribe as onViewport } from './viewport.js';
 import { initPanels, openExport } from './panels.js';
 import { initAddons } from './addons.js';
 import { initPWA } from './pwa.js';
@@ -26,6 +27,9 @@ function boot() {
   // restore any saved project
   S.load().then((ok) => { if (ok) { renderBin(); toast('Restored your last project'); } });
   S.subscribe((r) => { if (['media','load'].includes(r)) renderBin(); if (r === 'transport' || r === 'load') renderTransport(); if (r === 'project') $('#projName').value = S.state.project.name; });
+  // Form-factor change (phone ⇄ desktop): the editor's grid reflows, so the canvas-based
+  // timeline & preview must recompute against their new container widths.
+  onViewport(() => requestAnimationFrame(() => { renderTimeline(); drawAt(S.state.transport.time); }));
   renderBin(); renderTransport();
 }
 

@@ -9,7 +9,9 @@
 // `kind:'guest'` hosts a self-contained one-HTML-file app in an iframe (the subsystem
 // "html-applet as a guest the OS hosts" model) and bridges its menu over postMessage.
 const PRESENTERS = [
-  { id: 'editor', name: 'Editor',  type: 'editor', kind: 'native', role: 'desktop',
+  { id: 'home',   name: 'Home',    type: 'home',   kind: 'native', role: 'launcher',
+    icon: '🏠', blurb: 'Launcher — pick a surface.', path: '\\Shell\\Home' },
+  { id: 'editor', name: 'Editor',  type: 'editor', kind: 'native',
     icon: '🎬', blurb: 'CapCut-style multitrack A/V editor — timeline, preview, MP4 export.',
     path: '\\Shell\\Editor' },
   { id: 'paint',  name: 'Paint',   type: 'paint',  kind: 'guest', src: 'apps/paint/index.html',
@@ -31,12 +33,15 @@ export function resolve(id) {
   return _records.find((o) => o.id === key) || null;
 }
 
-// The desktop-role presenter — the Shell's resting surface (the editor).
-export function desktop() { return _records.find((o) => o.role === 'desktop') || _records[0] || null; }
+// The landing presenter — the Shell's front door (the Launcher). Phone-first: you arrive at a
+// chooser, not dumped into a surface.
+export function landing() { return _records.find((o) => o.role === 'launcher') || _records[0] || null; }
 
-// The Shell's layout — which presenters to offer in the app rail, in order. A registry query
-// today; static below. Degrades to the desktop alone if somehow empty (the irreducible minimum).
-export function layout() { return _records.length ? _records : (desktop() ? [desktop()] : []); }
+// The Shell's layout — which presenters to offer in the app rail, in order.
+export function layout() { return _records.length ? _records : (landing() ? [landing()] : []); }
+
+// The launcher's tiles — every surface except the launcher itself.
+export function tiles() { return _records.filter((o) => o.role !== 'launcher'); }
 
 // Content URL for a guest presenter — derived ONLY here, so physical layout is confined to one
 // function (rename/move a file = a non-event for callers).

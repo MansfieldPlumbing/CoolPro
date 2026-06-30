@@ -10,6 +10,14 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%235b8cff'/%3E%3Ctext x='16' y='22' font-size='15' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='700'%3EC%3C/text%3E%3C/svg%3E" />
   <link rel="stylesheet" href="theme.css" />
   <link rel="stylesheet" href="app.css" />
+  <!-- form-factor signal, set before first paint (no flash). Banks off "Desktop site": that
+       widens the layout viewport, so the width check below reports desktop. -->
+  <script>
+    try { var p = localStorage.getItem('coolpro-view');
+      document.documentElement.dataset.vp = (p === 'desktop' || p === 'phone') ? p
+        : ((window.innerWidth || 1024) >= 820 ? 'desktop' : 'phone');
+    } catch (e) { document.documentElement.dataset.vp = 'desktop'; }
+  </script>
 </head>
 <body data-app="editor">
   <!-- ═══════════════════════ the Shell ═══════════════════════
@@ -17,15 +25,27 @@
        presenter into the stage and presents its verbs. (subsystem Shell.js, ported.) -->
   <div id="shell">
     <header class="shell-bar">
-      <div class="brand"><b>Cool<span class="no">Pro</span></b><small>FOSS studio</small></div>
+      <button id="brandHome" class="brand" title="Home"><b>Cool<span class="no">Pro</span></b><small>FOSS studio</small></button>
       <nav id="appRail" class="app-rail" aria-label="Apps"></nav>
       <div class="spacer"></div>
       <div id="shellMenu" class="shell-menu"></div>
+      <button id="vpToggle" class="btn ghost vp-toggle" title="Switch view">🖥</button>
     </header>
 
     <div id="stage" class="stage-host">
+      <!-- ── launcher: the front door (phone-first — arrive at a chooser, not a surface) ── -->
+      <section id="surface-home" class="surface">
+        <div class="launcher">
+          <div class="launcher-head">
+            <h1>Cool<span class="no">Pro</span></h1>
+            <p>FOSS on-device studio — video, audio, image &amp; 3D. Pick a surface.</p>
+          </div>
+          <div id="launchGrid" class="launch-grid"></div>
+        </div>
+      </section>
+
       <!-- ── native surface: the CapCut-style A/V editor ── -->
-      <section id="surface-editor" class="surface">
+      <section id="surface-editor" class="surface" hidden>
         <div id="app">
           <!-- top bar -->
           <header class="topbar">
@@ -108,9 +128,11 @@
 
   <script type="module" src="src/app.js"></script>
   <script type="module">
+    import { initViewport } from './src/viewport.js';
     import { initShell } from './src/shell.js';
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initShell);
-    else initShell();
+    function boot() { initViewport(); initShell(); }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+    else boot();
   </script>
 </body>
 </html>

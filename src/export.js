@@ -139,4 +139,4 @@ function download(blob, name) {
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }
-const safe = (s) => (s || 'nocap').replace(/[^\w.-]+/g, '_').slice(0, 64);
+const safe = (s) => (s || 'coolpro').replace(/[^\w.-]+/g, '_').slice(0, 64);

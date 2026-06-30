@@ -17,7 +17,7 @@ const SHELL = [
   './', './index.html', './theme.css', './app.css', './manifest.webmanifest',
   // editor + shell spine
   './src/app.js', './src/shell.js', './src/registry.js', './src/presenter.js',
-  './src/vom.js', './src/dpx.js', './src/ml.js',
+  './src/viewport.js', './src/vom.js', './src/dpx.js', './src/ml.js',
   './src/util.js', './src/hud.js', './src/idb.js', './src/store.js',
   './src/audio.js', './src/media.js', './src/timeline.js', './src/preview.js',
   './src/panels.js', './src/export.js', './src/cdn.js', './src/pwa.js',

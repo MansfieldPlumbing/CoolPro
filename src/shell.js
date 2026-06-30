@@ -8,6 +8,7 @@
 // full in-frame UIs today, so the Shell bar is primarily the app switcher.
 import * as Registry from './registry.js';
 import { presenterFor } from './presenter.js';
+import { toggle as vpToggle, mode as vpMode, isForced, subscribe as onViewport } from './viewport.js';
 
 let active = null;
 let guestHost = null;
@@ -16,7 +17,11 @@ const mounted = new Map();   // id -> presenter (warm)
 export function initShell() {
   guestHost = document.getElementById('stage-guests');
   buildRail();
-  const home = Registry.desktop() || Registry.layout()[0];
+  buildLauncher();
+  wireChrome();
+  onViewport(syncVpToggle);
+  syncVpToggle();
+  const home = Registry.landing() || Registry.layout()[0];
   if (home) switchTo(home.id);
 }
 
@@ -27,6 +32,35 @@ function buildRail() {
     `<button class="app-tab" data-app="${r.id}" title="${escAttr(r.blurb)}">
        <span class="ic">${r.icon}</span><span class="nm">${escHtml(r.name)}</span></button>`).join('');
   rail.querySelectorAll('.app-tab').forEach((b) => b.addEventListener('click', () => switchTo(b.dataset.app)));
+}
+
+// The Launcher front door — big tiles for each surface, projected from the registry. One column
+// on phone, a grid on desktop (the layout follows :root[data-vp], not this code).
+function buildLauncher() {
+  const host = document.getElementById('launchGrid');
+  if (!host) return;
+  host.innerHTML = Registry.tiles().map((r) =>
+    `<button class="launch-tile" data-app="${r.id}">
+       <span class="ic">${r.icon}</span>
+       <span class="meta"><span class="nm">${escHtml(r.name)}</span><span class="bl">${escHtml(r.blurb)}</span></span>
+     </button>`).join('');
+  host.querySelectorAll('.launch-tile').forEach((b) => b.addEventListener('click', () => switchTo(b.dataset.app)));
+}
+
+function wireChrome() {
+  const brand = document.getElementById('brandHome');
+  if (brand) brand.addEventListener('click', () => switchTo('home'));
+  const vp = document.getElementById('vpToggle');
+  if (vp) vp.addEventListener('click', vpToggle);
+}
+
+// Reflect the form-factor in the toggle: it offers the OTHER mode (mirrors "Desktop site").
+function syncVpToggle() {
+  const vp = document.getElementById('vpToggle');
+  if (!vp) return;
+  const m = vpMode();
+  vp.textContent = m === 'desktop' ? '📱' : '🖥';
+  vp.title = (m === 'desktop' ? 'Switch to phone view' : 'Switch to desktop view') + (isForced() ? ' (forced)' : '');
 }
 
 export async function switchTo(id) {
