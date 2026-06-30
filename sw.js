@@ -8,7 +8,7 @@
         known CDN hosts are auto-cached on first network hit.
    Update flow is explicit: we do NOT skipWaiting on install — the page detects the
    waiting worker and offers "Update", then posts SKIP_WAITING. */
-const VERSION = 'coolpro-v2';
+const VERSION = 'coolpro-v3';
 const APP_CACHE = VERSION;
 const CDN_CACHE = 'nocap-cdn';      // stable bucket name (NOT version-suffixed): survives app updates
 const SHARE_CACHE = 'coolpro-share'; // transient: Android share-target hand-off, drained on boot
@@ -18,7 +18,7 @@ const SHELL = [
   './', './index.html', './theme.css', './app.css', './manifest.webmanifest',
   // editor + shell spine
   './src/app.js', './src/shell.js', './src/registry.js', './src/presenter.js',
-  './src/viewport.js', './src/vom.js', './src/dpx.js', './src/ml.js', './src/share.js',
+  './src/viewport.js', './src/vom.js', './src/dpx.js', './src/ml.js', './src/share.js', './src/convert.js',
   './src/util.js', './src/hud.js', './src/idb.js', './src/store.js',
   './src/audio.js', './src/media.js', './src/timeline.js', './src/preview.js',
   './src/panels.js', './src/export.js', './src/cdn.js', './src/pwa.js',
