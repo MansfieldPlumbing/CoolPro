@@ -1,63 +1,68 @@
-# nocap-editor
+# CoolPro
 
-**FOSS relief from Play Store slop** — a client-side, no-build, vanilla-JS video & audio
-editor in the browser. The goal: a CapCut / mobile-audio-editor replacement that runs
-entirely on-device, with real on-device AI (no accounts, no uploads, no backend).
+**FOSS relief from Play Store slop** — a client-side, no-build, vanilla-JS creative studio in
+the browser. One app that is a **CapCut**-style A/V editor, a **Paint-Shop-Pro**-style raster
+studio, and a **3D model maker** — sharing one inference runtime and one object model, running
+entirely on-device (no accounts, no uploads, no backend).
 
-> Decomposed from the React/Vite (Google AI Studio) "No Cap — Cap Cut Killer"
-> prototype into plain HTML/CSS/JS. The original React project has been removed now
-> that the rewrite stands on its own (it remains in git history if ever needed). The
-> live app is the vanilla build served from `index.html`. A few standalone vanilla UI
-> mockups from the prototype are kept under [`examples/`](examples/) as design references.
+> Merged from three sibling repos — the **nocap** A/V editor (this repo's origin), **art4quinn**
+> (paint + 3D + image ML), and **arlinearcade** (the shared painter + audio helpers) — onto the
+> architectural spine of **subsystem** (the VOM object model and the dp-onnx → **dpx** runtime).
+> The shared code is shared *on purpose*: one ML harness and one UI chrome power every surface.
 
-## What works today
+## The three surfaces (one shell)
 
-- **Media bin** — import video / audio / images (file picker or drag-and-drop), with
-  generated thumbnails and audio waveforms.
-- **Multi-track timeline** — canvas-rendered video & audio tracks; drag to move,
-  edge-drag to trim, click the ruler to scrub, snapping, zoom, split, delete.
-- **Preview** — canvas compositor + Web-Audio playback with per-clip / per-track volume.
-- **Export** — deterministic offline audio mixdown to **WAV** (built-in) or **MP3**
-  (lamejs); **video** via realtime canvas+audio capture → **MP4** (H.264/AAC,
-  transcoded by **ffmpeg.wasm**) or fast **WebM**.
-- **Projects** — saved to browser storage (IndexedDB) and restored on reload.
-- **AI layer** — a thin provider abstraction (dp-onnx-ready). Live now: **Smart Auto-Trim**
-  (silence detection, no download). Declared with honest status: captions (Whisper),
-  background removal (RMBG-1.4), voiceover (Kokoro via dp-onnx), and more.
-- **Installable PWA** — install to home screen; **explicit update checking** (a banner
-  offers "Update" — you're in control, no surprise reloads).
-- **Full offline** — the entire app shell is precached, so it boots and edits in
-  airplane mode. Updating the app **never wipes your CDN cache**.
-- **Add-ons / CDN cache** — a package manager (the bundle's "CDN Marketplace"): add/remove
-  CDN packages (ESM, wasm, model weights) and **warm them for offline use**. The app cache
-  (`nocap-v*`) and the CDN cache (`nocap-cdn`) are independent, so updates and add-ons don't
-  step on each other.
+The top bar is the **Shell** — an app switcher that mounts one *presenter* at a time. Switch
+with the rail; everything shares the same media, the same ML runtime, and the same house style.
 
-## Architecture
-No framework, no bundler. `index.html` loads ES modules from `src/`:
+| surface | what it is | brings |
+| --- | --- | --- |
+| 🎬 **Editor** | CapCut-style multitrack A/V editor | timeline, preview compositor, Web-Audio mix, WAV/MP3/WebM/**MP4** (ffmpeg.wasm) export |
+| 🖌️ **Paint** | Paint-Shop-Pro raster studio (`apps/paint`) | layers, blend modes, brush/pencil/marker/fill, blur/smudge/dodge/burn, **AI Magic Wand** (SlimSAM), **Magic Eraser** (LaMa), **Erase Background** (RMBG) |
+| 🧊 **3D** | image → silhouette → paintable standee (`apps/three`) | drop any image, extrude to a 2-sided relief on a floor, paint on the mesh by raycast, **AI cut-out** (RMBG) |
 
-| module | role |
-| --- | --- |
-| `store.js` | project model, mutations, pub/sub, IndexedDB persistence |
-| `media.js` | import + decode, thumbnails, waveforms |
-| `timeline.js` | canvas timeline render + pointer interactions |
-| `preview.js` | transport, canvas compositor, audio sync |
-| `audio.js` | shared Web-Audio graph (per-element gain → master) |
-| `export.js` | offline mixdown, WAV/MP3 encoders, realtime video capture |
-| `ffmpeg.js` | MP4 (H.264/AAC) transcode via ffmpeg.wasm (vendored glue + CDN core) |
-| `ml.js` | on-device AI provider abstraction + capability catalog |
-| `cdn.js` | CDN package registry + warm/uncache into the durable CDN cache |
-| `pwa.js` | service-worker registration, install prompt, update checking |
-| `addons.js` | Add-ons modal: manage CDN packages, install, check updates |
-| `panels.js` | inspector: clip props, Audio FX, Video FX, AI |
-| `app.js` | wiring: bin, top bar, transport, keyboard |
+## Architecture — the subsystem doctrine, in the browser
 
-`sw.js` precaches the shell (offline) and serves a separate `nocap-cdn` cache for
-cross-origin packages; `manifest.webmanifest` + `icons/` make it installable.
+CoolPro mirrors **subsystem**'s discipline: *one namespace of refcounted objects, the UI is a
+projection of it, nothing holds its own truth, behaviours are verbs on objects.*
 
-`theme.css` holds the design tokens (house style); `app.css` holds layout only.
+- **`src/vom.js` — the VOM (Virtual Object Manager).** JS parity of subsystem's `vom.h`/`Vom.cs`
+  kernel: one namespace of refcounted, **generational handles**; authority *is* the handle;
+  reclaim is deterministic — **free-on-zero**, owner-scoped, cascade-kill on terminate. The
+  difference from the native seam: a region holds a live JS *node* (a clip, a layer, a mesh, a
+  model session) instead of a byte span. "JavaScript when it actually comes correct."
+- **`src/dpx.js` — the inference runtime.** Formerly the editor's thin `ml` seam; promoted to
+  *the* runtime (subsystem's **dp-onnx → dpx**). One provider registry, one capability catalog,
+  one job lock — and the load-bearing tie-in: **a loaded model is a VOM region.** Its refcount is
+  its authority; at zero the region frees and the session's `dispose()` releases the GPU/WASM
+  weights. Inference can't leak because the namespace owns it. A future **dpx-wasm/WebNN** build
+  of the native engine registers as a provider and the call sites never move.
+- **`src/registry.js` — resolve-by-id.** The one place that knows how a presenter is *located*
+  (static manifest now; a `Cm` query later — callers don't change). Resolve-known, degrade-to-empty.
+- **`src/presenter.js` + `src/shell.js` — the chrome.** A presenter holds no truth: it is handed
+  a host + context, renders, and contributes **verbs** the Shell presents. Native presenters
+  (the editor) mount in-realm; **guests** (paint, 3D) are hosted one-HTML-file apps in an iframe,
+  with menus bridged over the postMessage protocol in `shared/presenter.js` — the exact
+  html-applet-as-guest model subsystem uses. (Paint already ships as an `.obp` object-presenter
+  with a `Sys.vom` of its own, designed to bind a host-injected provider with zero UI change.)
+
+```
+index.html ── Shell (app rail)
+   ├─ src/shell.js · registry.js · presenter.js   the chrome (projects the namespace)
+   ├─ src/vom.js                                   the model (one refcounted namespace)
+   ├─ src/dpx.js  → vendor/ml/{segment,select,inpaint}.js   the runtime (RMBG · SlimSAM · LaMa)
+   ├─ surface: Editor (native)  src/{store,timeline,preview,audio,export,panels,…}.js
+   ├─ surface: Paint  (guest)   apps/paint/   ← shared vendor/ml + vendor/ui
+   └─ surface: 3D     (guest)   apps/three/   ← shared vendor/ml + vendor/ui
+```
+
+`theme.css` holds the editor's design tokens; `vendor/ui/flickpaint-ui.css` is the guests' shared
+glass chrome. `sw.js` precaches the whole studio (offline) and serves a durable `nocap-cdn` cache
+for cross-origin packages; the app cache and CDN cache are independent, so updates and add-ons
+don't step on each other.
 
 ## Run it
+
 It's static — serve the folder and open `index.html`:
 
 ```sh
@@ -65,15 +70,23 @@ python3 -m http.server 8080
 # open http://localhost:8080
 ```
 
-No special headers needed: MP4 export uses the **single-threaded** ffmpeg.wasm core, so
-it works without cross-origin isolation (COOP/COEP) — on plain static hosting and on
-GitHub Pages. (A multi-threaded core would be faster but would require COOP/COEP and is
-not used.) Installing the PWA and full offline both require **HTTPS** (or `localhost`);
-the included GitHub Pages workflow handles that once merged to `main`.
+No special headers needed: MP4 export uses the **single-threaded** ffmpeg.wasm core, so it works
+without cross-origin isolation (COOP/COEP) — on plain static hosting and on GitHub Pages.
+Installing the PWA and full offline both require **HTTPS** (or `localhost`).
 
-## Roadmap
-- Real captions (Whisper) + background removal (RMBG-1.4, ported from art4quinn).
-- dp-onnx browser runtime → Kokoro voiceover; heavier models (Demucs, super-res, RIFE).
-- Frame-accurate MP4 export (render frames straight to ffmpeg instead of realtime capture).
-- Transitions & keyframes.
-- Single-file build: inline `src/` + CSS into one self-contained `nocap.html`.
+## Roadmap (the merge, continued)
+
+This is **increment 1**: the spine (`vom`/`dpx`/`registry`/`shell`/`presenter`), the three
+surfaces brought in and switchable, the shared ML/UI deduplicated, and the editor's AI tab
+running real RMBG background removal on image clips through `dpx`.
+
+- **Hoist ML into `dpx` across the frame boundary** — today each guest realm loads its own ML
+  instance; route paint/3D inference through the host `dpx` so the model loads once, governed by
+  the VOM.
+- **Bind the guests' `Sys.vom` to `src/vom.js`** — paint's `__SUBSYSTEM_PROVIDER__` seam already
+  exists; make CoolPro the injected provider so layers live in the real namespace.
+- **dpx-wasm** — register the native engine's browser build as the `dpx` provider; flip `tts`
+  (Kokoro) and the heavier video caps from `native`/`soon` to `ready`.
+- **Cross-surface flow** — send a Paint cut-out or a 3D screenshot straight onto the editor timeline.
+- **Audio surface** (Cool-Edit-Pro side) — a dedicated waveform editor reusing `vendor/audio/`.
+- Frame-accurate MP4 export, transitions & keyframes, single-file build.

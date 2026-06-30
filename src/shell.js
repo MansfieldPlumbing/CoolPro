@@ -1,0 +1,82 @@
+// src/shell.js — the Shell: it reads the registry's layout, mounts presenters into the stage,
+// and presents the active presenter's contributed verbs. It holds no document truth — it is the
+// chrome that projects the namespace (subsystem's Shell.js role, ported to the studio).
+//
+// The editor is the resting `desktop` presenter (native, kept alive). Paint & 3D are guests,
+// mounted on first visit and kept warm so their canvas state survives a tab switch. A guest's
+// menu (if it contributes one over the presenter bridge) lands in #shellMenu; both guests ship
+// full in-frame UIs today, so the Shell bar is primarily the app switcher.
+import * as Registry from './registry.js';
+import { presenterFor } from './presenter.js';
+
+let active = null;
+let guestHost = null;
+const mounted = new Map();   // id -> presenter (warm)
+
+export function initShell() {
+  guestHost = document.getElementById('stage-guests');
+  buildRail();
+  const home = Registry.desktop() || Registry.layout()[0];
+  if (home) switchTo(home.id);
+}
+
+function buildRail() {
+  const rail = document.getElementById('appRail');
+  if (!rail) return;
+  rail.innerHTML = Registry.layout().map((r) =>
+    `<button class="app-tab" data-app="${r.id}" title="${escAttr(r.blurb)}">
+       <span class="ic">${r.icon}</span><span class="nm">${escHtml(r.name)}</span></button>`).join('');
+  rail.querySelectorAll('.app-tab').forEach((b) => b.addEventListener('click', () => switchTo(b.dataset.app)));
+}
+
+export async function switchTo(id) {
+  const rec = Registry.resolve(id);
+  if (!rec || (active && active.id === id)) return;
+  if (active) active.hide();
+
+  let p = mounted.get(id);
+  if (!p) {
+    const host = rec.kind === 'guest' ? guestHost : document.getElementById('surface-' + id);
+    p = presenterFor(rec);
+    await p.mount(host, { shell: api, registry: Registry });
+    mounted.set(id, p);
+  } else {
+    p.show();
+  }
+  active = p;
+
+  // Surface split: the native editor lives in #surface-editor; every guest shares #stage-guests
+  // (only the active guest's own frame is shown). The Shell owns which container is visible.
+  guestHost.hidden = rec.kind !== 'guest';
+
+  document.querySelectorAll('.app-tab').forEach((t) => t.classList.toggle('active', t.dataset.app === id));
+  document.body.dataset.app = id;
+  renderMenu(p);
+}
+
+// Present a presenter's contributed verbs (grouped by menu), or clear when it has none.
+function renderMenu(p) {
+  const slot = document.getElementById('shellMenu');
+  if (!slot) return;
+  const verbs = (p && p.verbs) || [];
+  if (!verbs.length) { slot.innerHTML = ''; return; }
+  const groups = {};
+  for (const v of verbs) (groups[v.menu || 'app'] ||= []).push(v);
+  slot.innerHTML = Object.entries(groups).map(([menu, items]) =>
+    `<div class="shell-menu-group" data-menu="${escAttr(menu)}">
+       <span class="mg-label">${escHtml(menu)}</span>
+       ${items.map((v) => `<button class="mg-verb" data-verb="${escAttr(v.verb)}"
+            ${v.enabled === false ? 'disabled' : ''}>${escHtml(v.label || v.verb)}${v.checked ? ' ✓' : ''}</button>`).join('')}
+     </div>`).join('');
+  slot.querySelectorAll('.mg-verb').forEach((b) =>
+    b.addEventListener('click', () => active && active.invoke(b.dataset.verb)));
+}
+
+// The handle the Shell hands each presenter (UiObject ctx.shell).
+const api = {
+  switchTo,
+  onVerbs(p) { if (p === active) renderMenu(p); },   // a guest re-announced its menu
+};
+
+const escHtml = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+const escAttr = (s) => String(s).replace(/"/g, '&quot;');

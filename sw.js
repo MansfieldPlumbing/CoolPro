@@ -1,29 +1,40 @@
-/* nocap — service worker.
+/* CoolPro — service worker.
    Extends the ArlineArcade pattern (network-first app code, versioned cache,
-   cleanup on activate) with TWO additions nocap needs:
-     1. A precached app shell so the editor is fully installable & offline.
+   cleanup on activate) with TWO additions CoolPro needs:
+     1. A precached app shell so the studio (editor + paint + 3D) is installable & offline.
      2. A separate, durable "CDN cache" for cross-origin packages (Transformers.js,
-        lamejs, ffmpeg.wasm, model weights…). Cross-origin GETs are served
+        onnxruntime-web, lamejs, ffmpeg.wasm, model weights…). Cross-origin GETs are served
         cache-first from CDN_CACHE so warmed packages work offline; requests to
         known CDN hosts are auto-cached on first network hit.
    Update flow is explicit: we do NOT skipWaiting on install — the page detects the
    waiting worker and offers "Update", then posts SKIP_WAITING. */
-const VERSION = 'nocap-v1';
+const VERSION = 'coolpro-v1';
 const APP_CACHE = VERSION;
-const CDN_CACHE = 'nocap-cdn';      // intentionally NOT version-suffixed: survives app updates
+const CDN_CACHE = 'nocap-cdn';      // stable bucket name (NOT version-suffixed): survives app updates
 const FALLBACK = './index.html';
 
 const SHELL = [
   './', './index.html', './theme.css', './app.css', './manifest.webmanifest',
-  './src/app.js', './src/util.js', './src/hud.js', './src/idb.js', './src/store.js',
+  // editor + shell spine
+  './src/app.js', './src/shell.js', './src/registry.js', './src/presenter.js',
+  './src/vom.js', './src/dpx.js', './src/ml.js',
+  './src/util.js', './src/hud.js', './src/idb.js', './src/store.js',
   './src/audio.js', './src/media.js', './src/timeline.js', './src/preview.js',
-  './src/panels.js', './src/export.js', './src/ml.js', './src/cdn.js', './src/pwa.js',
+  './src/panels.js', './src/export.js', './src/cdn.js', './src/pwa.js',
   './src/addons.js', './src/ffmpeg.js',
+  // shared, reused-everywhere assets
+  './shared/presenter.js',
+  './vendor/ml/segment.js', './vendor/ml/select.js', './vendor/ml/inpaint.js',
+  './vendor/ui/flickpaint-ui.css',
+  './vendor/ui/fonts/selawk.ttf', './vendor/ui/fonts/CascadiaCodeNF.ttf',
   './vendor/ffmpeg/index.js', './vendor/ffmpeg/classes.js', './vendor/ffmpeg/const.js',
   './vendor/ffmpeg/errors.js', './vendor/ffmpeg/types.js', './vendor/ffmpeg/utils.js',
   './vendor/ffmpeg/worker.js',
   './vendor/ffmpeg-util/index.js', './vendor/ffmpeg-util/errors.js',
   './vendor/ffmpeg-util/const.js', './vendor/ffmpeg-util/types.js',
+  // guest surfaces (entry points; heavier guest assets cache on first use)
+  './apps/paint/index.html',
+  './apps/three/index.html', './apps/three/app.js', './apps/three/characters.json',
   './icons/icon-192.png', './icons/icon-512.png', './icons/icon-maskable-512.png',
 ];
 

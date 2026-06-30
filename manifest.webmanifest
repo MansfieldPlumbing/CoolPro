@@ -1,7 +1,7 @@
 {
-  "name": "nocap — FOSS editor",
-  "short_name": "nocap",
-  "description": "On-device video & audio editor. No accounts, no uploads, no slop.",
+  "name": "CoolPro — FOSS A/V · paint · 3D studio",
+  "short_name": "CoolPro",
+  "description": "On-device video, audio, image and 3D studio. No accounts, no uploads, no slop.",
   "id": "./",
   "start_url": "./",
   "scope": "./",
@@ -9,7 +9,12 @@
   "orientation": "any",
   "background_color": "#0b0c10",
   "theme_color": "#0b0c10",
-  "categories": ["video", "productivity", "utilities"],
+  "categories": ["video", "graphics", "productivity", "utilities"],
+  "shortcuts": [
+    { "name": "A/V Editor", "short_name": "Editor", "url": "./#editor" },
+    { "name": "Paint", "short_name": "Paint", "url": "./apps/paint/index.html" },
+    { "name": "3D Maker", "short_name": "3D", "url": "./apps/three/index.html" }
+  ],
   "icons": [
     { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },

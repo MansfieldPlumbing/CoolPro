@@ -32,7 +32,8 @@
 
   --radius: 8px;
   --radius-sm: 5px;
-  --r-bar: 52px;        /* top bar height */
+  --r-shell: 46px;      /* shell app-switcher bar height */
+  --r-bar: 52px;        /* editor top bar height */
   --r-rail: 56px;       /* timeline ruler height */
   --shadow: 0 8px 24px rgba(0,0,0,.45);
 }
