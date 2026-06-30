@@ -8,16 +8,17 @@
         known CDN hosts are auto-cached on first network hit.
    Update flow is explicit: we do NOT skipWaiting on install — the page detects the
    waiting worker and offers "Update", then posts SKIP_WAITING. */
-const VERSION = 'coolpro-v1';
+const VERSION = 'coolpro-v2';
 const APP_CACHE = VERSION;
 const CDN_CACHE = 'nocap-cdn';      // stable bucket name (NOT version-suffixed): survives app updates
+const SHARE_CACHE = 'coolpro-share'; // transient: Android share-target hand-off, drained on boot
 const FALLBACK = './index.html';
 
 const SHELL = [
   './', './index.html', './theme.css', './app.css', './manifest.webmanifest',
   // editor + shell spine
   './src/app.js', './src/shell.js', './src/registry.js', './src/presenter.js',
-  './src/viewport.js', './src/vom.js', './src/dpx.js', './src/ml.js',
+  './src/viewport.js', './src/vom.js', './src/dpx.js', './src/ml.js', './src/share.js',
   './src/util.js', './src/hud.js', './src/idb.js', './src/store.js',
   './src/audio.js', './src/media.js', './src/timeline.js', './src/preview.js',
   './src/panels.js', './src/export.js', './src/cdn.js', './src/pwa.js',
@@ -55,7 +56,8 @@ self.addEventListener('install', (e) => {
 self.addEventListener('activate', (e) => {
   e.waitUntil((async () => {
     const keys = await caches.keys();
-    await Promise.all(keys.filter((k) => k !== APP_CACHE && k !== CDN_CACHE).map((k) => caches.delete(k)));
+    const KEEP = [APP_CACHE, CDN_CACHE, SHARE_CACHE];
+    await Promise.all(keys.filter((k) => !KEEP.includes(k)).map((k) => caches.delete(k)));
     await self.clients.claim();
   })());
 });
@@ -66,8 +68,15 @@ self.addEventListener('message', (e) => {
 
 self.addEventListener('fetch', (e) => {
   const req = e.request;
-  if (req.method !== 'GET') return;
   let url; try { url = new URL(req.url); } catch { return; }
+
+  // Android share-target: the system POSTs shared media here. No server on a static host, so we
+  // stash the files in SHARE_CACHE and 303-redirect to the app, which drains them on boot.
+  if (req.method === 'POST' && url.pathname.endsWith('/share-target')) {
+    e.respondWith(handleShare(req));
+    return;
+  }
+  if (req.method !== 'GET') return;
 
   if (url.origin !== self.location.origin) {
     // cross-origin: this is the CDN cache lane
@@ -111,4 +120,25 @@ async function cacheFirst(req, cacheName) {
     (await caches.open(cacheName)).put(req, fresh.clone()).catch(() => {});
     return fresh;
   } catch { return cached || Response.error(); }
+}
+
+// Drain a multipart share POST into SHARE_CACHE, then send the app home to pick it up.
+async function handleShare(req) {
+  try {
+    const form = await req.formData();
+    const files = form.getAll('media').filter((f) => f && f.size);
+    if (files.length) {
+      const cache = await caches.open(SHARE_CACHE);
+      let i = 0;
+      for (const f of files) {
+        const key = new Request('./shared/' + (Date.now()) + '-' + (i++));
+        const headers = { 'content-type': f.type || 'application/octet-stream',
+          'x-share-name': encodeURIComponent(f.name || ('shared-' + i)) };
+        await cache.put(key, new Response(f, { headers }));
+      }
+    }
+  } catch (_) { /* degrade: still navigate home, just with nothing staged */ }
+  const dest = new URL('./', self.registration.scope);
+  dest.search = '?shared';
+  return Response.redirect(dest.href, 303);
 }

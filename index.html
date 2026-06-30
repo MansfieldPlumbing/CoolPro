@@ -130,7 +130,8 @@
   <script type="module">
     import { initViewport } from './src/viewport.js';
     import { initShell } from './src/shell.js';
-    function boot() { initViewport(); initShell(); }
+    import { initShare } from './src/share.js';
+    function boot() { initViewport(); initShell(); initShare(); }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
     else boot();
   </script>

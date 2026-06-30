@@ -74,11 +74,21 @@ No special headers needed: MP4 export uses the **single-threaded** ffmpeg.wasm c
 without cross-origin isolation (COOP/COEP) — on plain static hosting and on GitHub Pages.
 Installing the PWA and full offline both require **HTTPS** (or `localhost`).
 
+## Phone-first
+
+CoolPro is built to be used from a phone. One form-factor signal (`src/viewport.js` →
+`:root[data-vp]`, `phone` | `desktop`) drives the whole studio: phone is a single scrollable
+column, desktop is the landscape grid. It banks off the browser's "Desktop site" toggle for
+free (that widens the viewport, flipping the signal), plus an in-app 🖥/📱 override. The front
+door is a **Launcher**, not a surface. Installed on Android, CoolPro registers a **share target**
+and **file handlers** — share a clip from Gallery (or "Open with → CoolPro") and it lands on the
+editor timeline (`manifest.webmanifest` + `sw.js` stash the share POST, `src/share.js` drains it).
+
 ## Roadmap (the merge, continued)
 
-This is **increment 1**: the spine (`vom`/`dpx`/`registry`/`shell`/`presenter`), the three
-surfaces brought in and switchable, the shared ML/UI deduplicated, and the editor's AI tab
-running real RMBG background removal on image clips through `dpx`.
+Landed: the spine (`vom`/`dpx`/`registry`/`shell`/`presenter`); the three surfaces, switchable;
+shared ML/UI deduplicated; real RMBG matte through `dpx`; phone/desktop awareness + Launcher;
+Android share-target + file-handlers. Next:
 
 - **Hoist ML into `dpx` across the frame boundary** — today each guest realm loads its own ML
   instance; route paint/3D inference through the host `dpx` so the model loads once, governed by
