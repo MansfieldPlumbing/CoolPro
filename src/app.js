@@ -8,6 +8,7 @@ import { initPreview, play, pause, toggle, seek, toStart, toEnd, drawAt } from '
 import { subscribe as onViewport } from './viewport.js';
 import { initPanels, openExport } from './panels.js';
 import { initAddons } from './addons.js';
+import { attachContextMenu } from './contextmenu.js';
 import { initPWA } from './pwa.js';
 import * as CDN from './cdn.js';
 import { toast } from './hud.js';
@@ -88,7 +89,20 @@ function renderBin() {
       ${m.thumbUrl ? `<img src="${m.thumbUrl}" alt="">` : `<div style="display:grid;place-items:center;height:100%;color:var(--muted)">${m.kind}</div>`}
       <span class="k">${m.kind}</span><span class="lbl">${esc(m.name)}</span>
     </div>`).join('');
-  $$('.item', bin).forEach((it) => it.addEventListener('click', () => { S.addClipFromMedia(it.dataset.id); toast('Added to timeline'); }));
+  $$('.item', bin).forEach((it) => {
+    const id = it.dataset.id;
+    it.addEventListener('click', () => { S.addClipFromMedia(id); toast('Added to timeline'); });
+    attachContextMenu(it, () => binMenu(id));
+  });
+}
+function binMenu(id) {
+  const m = S.media.get(id); if (!m) return [];
+  return [
+    { label: 'Add to timeline', icon: '＋', run: () => { S.addClipFromMedia(id); toast('Added to timeline'); } },
+    { label: 'Convert…', icon: '⇄', disabled: !m.file, run: () => { if (m.file) import('./convert.js').then((c) => c.openConvert(m.file)); } },
+    '-',
+    { label: 'Remove from bin', icon: '🗑', danger: true, run: () => { S.removeMedia(id); toast('Removed from bin'); } },
+  ];
 }
 
 // ---- top bar ------------------------------------------------------------

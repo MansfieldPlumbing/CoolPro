@@ -315,6 +315,22 @@
 .cv-form input:focus { border-color: var(--accent); outline: none; }
 .cv-hint { font-size: 12px; color: var(--faint); }
 
+/* ---- context menu (long-press / right-click verb flyout — the homespun Menu) ---- */
+.ctx-menu { position: fixed; z-index: 400; min-width: 186px; max-width: 270px; padding: 5px;
+  background: var(--surface); border: 1px solid var(--border-2); border-radius: 10px; box-shadow: var(--shadow);
+  animation: ctxIn .12s ease; }
+@keyframes ctxIn { from { opacity: 0; transform: scale(.97) translateY(-3px); } to { opacity: 1; transform: none; } }
+.ctx-item { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 9px 11px;
+  border: 0; border-radius: 7px; background: transparent; color: var(--fg); cursor: pointer; font: inherit; font-size: 13px; }
+.ctx-item:hover:not(.disabled) { background: color-mix(in srgb, var(--accent) 16%, transparent); }
+.ctx-item.danger { color: var(--error); }
+.ctx-item.danger:hover { background: color-mix(in srgb, var(--error) 16%, transparent); }
+.ctx-item.disabled { opacity: .4; cursor: default; }
+.ctx-ic { width: 18px; text-align: center; flex-shrink: 0; color: var(--muted); }
+.ctx-item.danger .ctx-ic { color: var(--error); }
+.ctx-lb { flex: 1; }
+.ctx-sep { height: 1px; margin: 4px 6px; background: var(--border); }
+
 /* ---- HUD / toast ---- */
 #hud { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 100;
   display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; }
