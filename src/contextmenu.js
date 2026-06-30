@@ -7,6 +7,10 @@
 
 let _open = null;
 
+// Is a context menu currently up? Other pointer handlers (the taskbar's tap-to-switch) check this so
+// a long-press that opened a menu doesn't also fire the tap action underneath it.
+export function isMenuOpen() { return !!_open; }
+
 export function closeMenu() {
   if (!_open) return;
   _open.remove(); _open = null;
@@ -19,7 +23,7 @@ function onKey(e) { if (e.key === 'Escape') closeMenu(); }
 
 export function openMenu(x, y, items) {
   closeMenu();
-  const m = document.createElement('div'); m.className = 'ctx-menu';
+  const m = document.createElement('div'); m.className = 'ctx-menu acrylic';
   for (const it of (items || [])) {
     if (it === '-' || it.sep) { const s = document.createElement('div'); s.className = 'ctx-sep'; m.appendChild(s); continue; }
     const b = document.createElement('button');

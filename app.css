@@ -34,6 +34,36 @@
 .guest-frame { width: 100%; height: 100%; border: 0; display: block; background: var(--bg); }
 .guest-frame[hidden] { display: none; }
 
+/* ---- taskbar: the multitasking dock (subsystem Taskbar, ported) ----
+   A persistent strip under the stage. Chips are surfaces; a live dot marks the warm ones. Wears the
+   shared .acrylic material (class on the element) so it's the same frosted glass as flickpaint. ---- */
+.taskbar { flex-shrink: 0; display: flex; align-items: center; gap: 8px; height: 56px; padding: 0 10px;
+  border-top: 1px solid var(--border); position: relative; z-index: 40;
+  box-shadow: 0 -10px 30px -12px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,0.10); }
+.tb-vp { width: 40px; height: 40px; flex-shrink: 0; display: grid; place-items: center; cursor: pointer;
+  background: transparent; border: 1px solid transparent; border-radius: 12px; color: var(--muted);
+  font-size: 17px; transition: background .12s, color .12s; }
+.tb-vp:hover { background: var(--surface-2); color: var(--fg); }
+.tb-launch { width: 40px; height: 40px; flex-shrink: 0; display: grid; place-items: center; cursor: pointer;
+  background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; color: var(--fg);
+  font-size: 17px; transition: background .12s, transform .1s; }
+.tb-launch:hover { background: color-mix(in srgb, var(--accent) 18%, var(--surface-2)); }
+.tb-launch:active { transform: scale(.93); }
+.tb-launch.swap .tb-launch-ic { animation: tbSwap .2s ease; }
+@keyframes tbSwap { from { transform: scale(.4) rotate(-30deg); opacity: 0; } to { transform: none; opacity: 1; } }
+.tb-strip { position: relative; flex: 1; height: 46px; min-width: 0; }
+.tb-chip { position: absolute; top: 0; left: 0; width: 46px; height: 46px; display: grid; place-items: center;
+  cursor: pointer; background: transparent; border: 1px solid transparent; border-radius: 12px; color: var(--fg);
+  touch-action: none; will-change: transform; transition: background .12s, border-color .12s; }
+.tb-chip:hover { background: var(--surface-2); }
+.tb-chip.active { background: color-mix(in srgb, var(--accent) 16%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 50%, transparent); }
+.tb-ic { font-size: 22px; line-height: 1; pointer-events: none; }
+.tb-dot { position: absolute; bottom: 3px; left: 50%; transform: translateX(-50%); width: 5px; height: 5px;
+  border-radius: 50%; background: transparent; transition: background .15s; pointer-events: none; }
+.tb-chip.live .tb-dot { background: color-mix(in srgb, var(--accent) 70%, var(--fg)); }
+.tb-chip.active.live .tb-dot { background: var(--accent); }
+
 #app {
   display: grid; height: 100%; width: 100%;
   grid-template-rows: var(--r-bar) minmax(0, 1fr) minmax(160px, 38vh) var(--r-status);
@@ -316,8 +346,11 @@
 .cv-hint { font-size: 12px; color: var(--faint); }
 
 /* ---- context menu (long-press / right-click verb flyout — the homespun Menu) ---- */
+/* .ctx-menu carries the shared .acrylic class (added in contextmenu.js) — same frosted glass as the
+   dock + flickpaint. No solid background here, so the acrylic material shows through. */
 .ctx-menu { position: fixed; z-index: 400; min-width: 186px; max-width: 270px; padding: 5px;
-  background: var(--surface); border: 1px solid var(--border-2); border-radius: 10px; box-shadow: var(--shadow);
+  border: 1px solid var(--border-2); border-radius: 10px;
+  box-shadow: 0 20px 50px -10px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.10);
   animation: ctxIn .12s ease; }
 @keyframes ctxIn { from { opacity: 0; transform: scale(.97) translateY(-3px); } to { opacity: 1; transform: none; } }
 .ctx-item { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 9px 11px;

@@ -33,14 +33,8 @@
        Chrome that projects the namespace. Holds no document truth: it mounts the active
        presenter into the stage and presents its verbs. (subsystem Shell.js, ported.) -->
   <div id="shell">
-    <header class="shell-bar">
-      <button id="brandHome" class="brand" title="Home"><b>Cool<span class="no">Pro</span></b><small>FOSS studio</small></button>
-      <nav id="appRail" class="app-rail" aria-label="Apps"></nav>
-      <div class="spacer"></div>
-      <div id="shellMenu" class="shell-menu"></div>
-      <button id="vpToggle" class="btn ghost vp-toggle" title="Switch view">🖥</button>
-    </header>
-
+    <!-- The app switcher used to live in a top shell-bar; the taskbar (below) is now the single nav.
+         No top chrome — the stage is full-bleed, the dock owns switching + view toggle. -->
     <div id="stage" class="stage-host">
       <!-- ── launcher: the front door (phone-first — arrive at a chooser, not a surface) ── -->
       <section id="surface-home" class="surface">
@@ -157,6 +151,11 @@
       <!-- ── guest surfaces: paint & 3D mount here as hosted iframes ── -->
       <div id="stage-guests" class="surface" hidden></div>
     </div>
+
+    <!-- ── taskbar: the multitasking dock (phone-first, thumb reach). Always visible; chips are the
+         studio's surfaces, a live dot marks the warm ones. Wears .acrylic — flickpaint's frosted
+         glass, one shared material, one cohesion knob. (subsystem Taskbar, ported.) ── -->
+    <nav id="taskbar" class="taskbar acrylic" aria-label="Open surfaces"></nav>
   </div>
 
   <div id="hud"></div>
@@ -167,7 +166,9 @@
     import { initViewport } from './src/viewport.js';
     import { initShell } from './src/shell.js';
     import { initShare } from './src/share.js';
-    function boot() { initThemeEngine(); initViewport(); initShell(); initShare(); }
+    import { initTaskbar } from './src/taskbar.js';
+    // taskbar before shell: the dock now hosts #vpToggle, which the shell's wireChrome binds.
+    function boot() { initThemeEngine(); initViewport(); initTaskbar(); initShell(); initShare(); }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
     else boot();
   </script>
