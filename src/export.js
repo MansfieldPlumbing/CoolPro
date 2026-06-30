@@ -9,13 +9,36 @@ import { ctx as audioCtx, master } from './audio.js';
 import { importModule } from './cdn.js';
 import { progress, toast } from './hud.js';
 
+// decodeAudioData can HANG forever on a video container (esp. mobile), which used to deadlock
+// audio export. Never await it unbounded — race it against a timeout; null on timeout/failure.
+function decodeWithTimeout(ab, ms = 15000) {
+  return Promise.race([
+    audioCtx().decodeAudioData(ab),
+    new Promise((_, rej) => setTimeout(() => rej(new Error('decode timeout')), ms)),
+  ]).catch(() => null);
+}
+
 const _bufCache = new Map();   // mediaId -> AudioBuffer
 async function bufferFor(m) {
   if (_bufCache.has(m.id)) return _bufCache.get(m.id);
   if (!m.file || m.kind === 'image') return null;
-  const ab = await m.file.arrayBuffer();
-  try { const buf = await audioCtx().decodeAudioData(ab.slice(0)); _bufCache.set(m.id, buf); return buf; }
-  catch (_) { return null; }
+  // 1) fast path: let the browser decode it (works for audio files), but bounded so it can't wedge.
+  try {
+    const ab = await m.file.arrayBuffer();
+    const buf = await decodeWithTimeout(ab.slice(0));
+    if (buf) { _bufCache.set(m.id, buf); return buf; }
+  } catch (_) {}
+  // 2) video (or a codec the browser won't decode): extract the audio track via ffmpeg, then
+  //    decode the resulting PCM WAV (which always decodes fast). This is the reliable fallback.
+  if (m.kind === 'video') {
+    try {
+      const { extractWav } = await import('./ffmpeg.js');
+      const wav = await extractWav(m.file);
+      const buf = await audioCtx().decodeAudioData(await wav.arrayBuffer());
+      _bufCache.set(m.id, buf); return buf;
+    } catch (_) {}
+  }
+  return null;
 }
 
 // ---- offline audio mixdown → AudioBuffer --------------------------------
@@ -46,8 +69,8 @@ export async function exportAudio(format = 'wav') {
     let blob, ext;
     if (format === 'mp3') { pr.status('Encoding MP3…'); blob = await encodeMp3(buf); ext = 'mp3'; }
     else { pr.status('Encoding WAV…'); blob = encodeWav(buf); ext = 'wav'; }
-    download(blob, `${safe(S.state.project.name)}.${ext}`);
-    pr.done('Export ready');
+    const how = await shareOrDownload(blob, `${safe(S.state.project.name)}.${ext}`);
+    pr.done(how === 'shared' ? 'Shared' : how === 'cancelled' ? 'Cancelled' : 'Export ready');
   } catch (e) { console.error(e); pr.fail(e.message); }
 }
 
@@ -78,14 +101,16 @@ export async function exportVideo(onFrame, format = 'mp4') {
     let blob = new Blob(chunks, { type: mime });
 
     // If the user asked for MP4 and we didn't already capture MP4, transcode via ffmpeg.wasm.
+    let outName;
     if (format === 'mp4' && !mime.includes('mp4')) {
       const { transcodeToMp4 } = await import('./ffmpeg.js');
       blob = await transcodeToMp4(blob, { onStatus: pr.status });
-      download(blob, `${safe(S.state.project.name)}.mp4`);
+      outName = `${safe(S.state.project.name)}.mp4`;
     } else {
-      download(blob, `${safe(S.state.project.name)}.${mime.includes('mp4') ? 'mp4' : 'webm'}`);
+      outName = `${safe(S.state.project.name)}.${mime.includes('mp4') ? 'mp4' : 'webm'}`;
     }
-    pr.done('Export ready');
+    const how = await shareOrDownload(blob, outName);
+    pr.done(how === 'shared' ? 'Shared' : how === 'cancelled' ? 'Cancelled' : 'Export ready');
   } catch (e) { console.error(e); pr.fail(e.message); }
 }
 
@@ -115,7 +140,7 @@ function encodeWav(audioBuffer) {
 }
 
 let _lame = null;
-async function encodeMp3(audioBuffer) {
+export async function encodeMp3(audioBuffer) {
   if (!_lame) {
     const mod = await importModule('lamejs');   // managed + cached via the CDN package manager
     _lame = mod.default || mod;
@@ -134,9 +159,23 @@ async function encodeMp3(audioBuffer) {
   return new Blob(data, { type: 'audio/mpeg' });
 }
 
-function download(blob, name) {
+export function download(blob, name) {
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }
-const safe = (s) => (s || 'coolpro').replace(/[^\w.-]+/g, '_').slice(0, 64);
+
+// Phone-first "save": hand the file to the OS share sheet (→ Files, messaging, anywhere) when the
+// browser can share files; otherwise fall back to a download. Returns 'shared'|'cancelled'|'downloaded'.
+export async function shareOrDownload(blob, name) {
+  try {
+    const file = new File([blob], name, { type: blob.type || 'application/octet-stream' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file], title: name }); return 'shared'; }
+      catch (e) { if (e && e.name === 'AbortError') return 'cancelled'; }   // user dismissed — don't also download
+    }
+  } catch (_) {}
+  download(blob, name);
+  return 'downloaded';
+}
+export const safe = (s) => (s || 'coolpro').replace(/[^\w.-]+/g, '_').slice(0, 64);

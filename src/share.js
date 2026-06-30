@@ -10,6 +10,7 @@
 // path → importFiles → switch to the editor.
 import { importFiles } from './media.js';
 import { switchTo } from './shell.js';
+import { openConvert } from './convert.js';
 import { toast } from './hud.js';
 
 const SHARE_CACHE = 'coolpro-share';
@@ -49,9 +50,12 @@ function wireLaunchQueue() {
 }
 
 async function land(files) {
-  switchTo('editor');               // bring the bin into view
-  await importFiles(files);         // decode + thumbnail + auto-place on the timeline
-  toast(`Added ${files.length} shared item${files.length > 1 ? 's' : ''} to the editor`, { ms: 2600 });
+  // A single shared file opens the Convert sheet (your options: extract audio, convert, add to
+  // timeline, share back out). Multiple files bulk-import straight onto the timeline.
+  if (files.length === 1) { openConvert(files[0]); return; }
+  switchTo('editor');
+  await importFiles(files);
+  toast(`Added ${files.length} shared items to the editor`, { ms: 2600 });
 }
 
 function cleanUrl() {

@@ -177,6 +177,34 @@
 :root[data-vp="phone"] .launcher-head h1 { font-size: 26px; }
 :root[data-vp="phone"] .launch-grid { grid-template-columns: 1fr; }
 
+/* ---- convert sheet ---- */
+.cv-back { position: fixed; inset: 0; z-index: 300; background: rgba(0,0,0,.6);
+  display: grid; place-items: center; padding: 16px; }
+.cv-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  box-shadow: var(--shadow); width: min(460px, 96vw); max-height: 90vh; overflow: auto; }
+.cv-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;
+  padding: 16px 16px 10px; border-bottom: 1px solid var(--border); }
+.cv-head b { font-size: 16px; }
+.cv-file { font-size: 11px; color: var(--muted); display: block; margin-top: 3px; word-break: break-all; }
+.cv-x { background: transparent; border: 0; color: var(--muted); cursor: pointer; font-size: 16px; padding: 2px 6px; }
+.cv-body { padding: 14px 16px 18px; }
+.cv-grid { display: flex; flex-direction: column; gap: 8px; }
+.cv-opt { text-align: left; padding: 13px 14px; font-size: 14px; cursor: pointer; color: var(--fg);
+  background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.cv-opt:hover { border-color: var(--accent); background: #232733; }
+.cv-progress { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 28px 8px; }
+.cv-spin { width: 34px; height: 34px; border-radius: 50%; border: 3px solid var(--border-2);
+  border-top-color: var(--accent); animation: cv-spin .8s linear infinite; }
+@keyframes cv-spin { to { transform: rotate(360deg); } }
+.cv-status { font-size: 13px; color: var(--muted); text-align: center; }
+.cv-result { display: flex; flex-direction: column; gap: 14px; padding: 6px 0; }
+.cv-ok { font-size: 14px; color: var(--success); word-break: break-all; }
+.cv-err { font-size: 13px; color: var(--error); }
+.cv-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.cv-actions .btn { flex: 1; justify-content: center; min-width: 110px; }
+.cv-again { background: transparent; border: 0; color: var(--muted); cursor: pointer; font-size: 12px;
+  text-decoration: underline; align-self: flex-start; padding: 0; }
+
 /* ---- HUD / toast ---- */
 #hud { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 100;
   display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none; }

@@ -39,12 +39,22 @@ function buildRail() {
 function buildLauncher() {
   const host = document.getElementById('launchGrid');
   if (!host) return;
-  host.innerHTML = Registry.tiles().map((r) =>
+  const tiles = Registry.tiles().map((r) =>
     `<button class="launch-tile" data-app="${r.id}">
        <span class="ic">${r.icon}</span>
        <span class="meta"><span class="nm">${escHtml(r.name)}</span><span class="bl">${escHtml(r.blurb)}</span></span>
      </button>`).join('');
-  host.querySelectorAll('.launch-tile').forEach((b) => b.addEventListener('click', () => switchTo(b.dataset.app)));
+  // Convert is a quick action, not a surface: pick/share a file → options → share the result out.
+  const convertTile =
+    `<button class="launch-tile" data-action="convert">
+       <span class="ic">⇄</span>
+       <span class="meta"><span class="nm">Convert</span><span class="bl">Open a video/audio/image → extract audio, convert, remove background → share it back out.</span></span>
+     </button>`;
+  host.innerHTML = tiles + convertTile;
+  host.querySelectorAll('.launch-tile').forEach((b) => b.addEventListener('click', () => {
+    if (b.dataset.action === 'convert') import('./convert.js').then((m) => m.pickAndConvert());
+    else switchTo(b.dataset.app);
+  }));
 }
 
 function wireChrome() {

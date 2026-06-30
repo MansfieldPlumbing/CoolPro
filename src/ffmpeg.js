@@ -38,6 +38,22 @@ export async function loadFFmpeg(onStatus) {
   return _loading;
 }
 
+// Extract the audio track of ANY media (video or audio, any codec) to a 48k stereo PCM WAV.
+// This is the codec-agnostic, never-hangs path that the browser's decodeAudioData can't give us
+// for video containers — it's what makes "video → audio" reliable (export + the Convert sheet).
+export async function extractWav(blob, { onStatus } = {}) {
+  const ff = await loadFFmpeg(onStatus);
+  const { fetchFile } = await import('../vendor/ffmpeg-util/index.js');
+  const inName = 'in', outName = 'out.wav';
+  await ff.writeFile(inName, await fetchFile(blob));
+  onStatus?.('Extracting audio…');
+  await ff.exec(['-i', inName, '-vn', '-ac', '2', '-ar', '48000', '-c:a', 'pcm_s16le', outName]);
+  const data = await ff.readFile(outName);
+  try { await ff.deleteFile(inName); await ff.deleteFile(outName); } catch (_) {}
+  if (!data || !data.length) throw new Error('No audio track found');
+  return new Blob([data.buffer], { type: 'audio/wav' });
+}
+
 // Transcode a recorded blob (WebM from MediaRecorder) to H.264/AAC MP4.
 export async function transcodeToMp4(blob, { onStatus } = {}) {
   const ff = await loadFFmpeg(onStatus);
