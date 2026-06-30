@@ -54,6 +54,64 @@ export async function extractWav(blob, { onStatus } = {}) {
   return new Blob([data.buffer], { type: 'audio/wav' });
 }
 
+const H264 = ['-c:v', 'libx264', '-preset', 'veryfast', '-pix_fmt', 'yuv420p', '-crf', '23'];
+
+// Trim a video to [startSec, endSec] — accurate re-encode from the seek point.
+export async function trimVideo(blob, { startSec = 0, endSec, onStatus } = {}) {
+  const ff = await loadFFmpeg(onStatus);
+  const { fetchFile } = await import('../vendor/ffmpeg-util/index.js');
+  await ff.writeFile('in', await fetchFile(blob));
+  const dur = Math.max(0.05, (endSec ?? 0) - startSec);
+  onStatus?.('Trimming…');
+  await ff.exec(['-ss', String(startSec), '-i', 'in', '-t', String(dur),
+    ...H264, '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', 'out.mp4']);
+  const data = await ff.readFile('out.mp4');
+  try { await ff.deleteFile('in'); await ff.deleteFile('out.mp4'); } catch (_) {}
+  return new Blob([data.buffer], { type: 'video/mp4' });
+}
+
+// Outpaint "only so far": grow the frame by `factor` and fill the new border with a blurred,
+// scaled copy of the frame (the CapCut/Reels look). Cheap, no model — falls out of ffmpeg.
+export async function outpaintVideo(blob, { factor = 1.3, onStatus } = {}) {
+  const ff = await loadFFmpeg(onStatus);
+  const { fetchFile } = await import('../vendor/ffmpeg-util/index.js');
+  await ff.writeFile('in', await fetchFile(blob));
+  onStatus?.('Outpainting…');
+  const f = Math.max(1.05, Math.min(2, factor));
+  // even dimensions for yuv420p: round the padded canvas to /2
+  const fc = `[0:v]split=2[o][b];` +
+    `[b]scale=ceil(iw*${f}/2)*2:ceil(ih*${f}/2)*2,boxblur=30:2[bg];` +
+    `[bg][o]overlay=(W-w)/2:(H-h)/2,format=yuv420p[v]`;
+  await ff.exec(['-i', 'in', '-filter_complex', fc, '-map', '[v]', '-map', '0:a?',
+    ...H264, '-c:a', 'copy', '-movflags', '+faststart', 'out.mp4']);
+  const data = await ff.readFile('out.mp4');
+  try { await ff.deleteFile('in'); await ff.deleteFile('out.mp4'); } catch (_) {}
+  return new Blob([data.buffer], { type: 'video/mp4' });
+}
+
+// Stitch videos end to end. Each is normalized (scale+pad to a common 1280×720, SAR 1) so clips of
+// different sizes concat cleanly. Assumes each clip has an audio track (typical phone video).
+export async function stitchVideos(blobs, { width = 1280, height = 720, onStatus } = {}) {
+  const ff = await loadFFmpeg(onStatus);
+  const { fetchFile } = await import('../vendor/ffmpeg-util/index.js');
+  const n = blobs.length;
+  if (n < 2) throw new Error('Pick at least two videos to stitch');
+  for (let i = 0; i < n; i++) await ff.writeFile('in' + i, await fetchFile(blobs[i]));
+  onStatus?.(`Stitching ${n} clips…`);
+  let fc = '';
+  for (let i = 0; i < n; i++)
+    fc += `[${i}:v]scale=${width}:${height}:force_original_aspect_ratio=decrease,` +
+          `pad=${width}:${height}:(ow-iw)/2:(oh-ih)/2,setsar=1,fps=30[v${i}];`;
+  for (let i = 0; i < n; i++) fc += `[v${i}][${i}:a]`;
+  fc += `concat=n=${n}:v=1:a=1[v][a]`;
+  const inputs = []; for (let i = 0; i < n; i++) inputs.push('-i', 'in' + i);
+  await ff.exec([...inputs, '-filter_complex', fc, '-map', '[v]', '-map', '[a]',
+    ...H264, '-c:a', 'aac', '-b:a', '192k', '-movflags', '+faststart', 'out.mp4']);
+  const data = await ff.readFile('out.mp4');
+  try { for (let i = 0; i < n; i++) await ff.deleteFile('in' + i); await ff.deleteFile('out.mp4'); } catch (_) {}
+  return new Blob([data.buffer], { type: 'video/mp4' });
+}
+
 // Transcode a recorded blob (WebM from MediaRecorder) to H.264/AAC MP4.
 export async function transcodeToMp4(blob, { onStatus } = {}) {
   const ff = await loadFFmpeg(onStatus);
