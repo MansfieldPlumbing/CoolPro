@@ -4,7 +4,7 @@ import { $, clamp } from './util.js';
 import * as S from './store.js';
 
 const RULER_H = 24, TRACK_H = 58, GAP = 6;
-let cv, ctx, scroll, wrap, playhead;
+let cv, ctx, scroll, wrap, playhead, heads, headsInner;
 let pxPerSec = 90;
 const C = {};   // resolved theme colors
 let drag = null; // { mode, id, grabDx, edge, startT0, startDur, startIn }
@@ -12,6 +12,9 @@ let drag = null; // { mode, id, grabDx, edge, startT0, startDur, startIn }
 export function initTimeline() {
   cv = $('#tl-canvas'); ctx = cv.getContext('2d');
   scroll = $('#tlScroll'); wrap = $('#tlWrap'); playhead = $('#tl-playhead');
+  heads = $('#tlHeaders'); headsInner = $('#tlHeadersInner');
+  // the header column doesn't scroll horizontally; vertical scroll is mirrored from the lanes.
+  if (scroll && headsInner) scroll.addEventListener('scroll', () => { headsInner.style.transform = `translateY(${-scroll.scrollTop}px)`; });
   const cs = getComputedStyle(document.documentElement);
   for (const k of ['--surface','--surface-2','--panel','--border','--border-2','--muted','--fg',
     '--clip-video','--clip-audio','--clip-image','--accent','--track-video','--track-audio'])
@@ -24,8 +27,51 @@ export function initTimeline() {
   S.subscribe((reason) => {
     if (reason === 'transport') return setPlayhead(S.state.transport.time, true);
     render();
+    renderHeaders();
   });
   render();
+  renderHeaders();
+}
+
+// ---- track headers (the strip left of the lanes: name · Mute · Solo · volume) ----
+// Rows are rebuilt only when the track COUNT changes; otherwise state updates in place so a
+// volume drag (the active range input) is never recreated under the user's finger.
+function renderHeaders() {
+  if (!headsInner) return;
+  const tracks = S.state.project.tracks;
+  let rows = [...headsInner.querySelectorAll('.trk-head')];
+  if (rows.length !== tracks.length) {
+    headsInner.innerHTML = `<div class="tl-head-spacer" style="height:${RULER_H}px"></div>` + tracks.map(headHTML).join('');
+    rows = [...headsInner.querySelectorAll('.trk-head')];
+    rows.forEach((row) => wireHeaderRow(row));
+  }
+  rows.forEach((row, i) => {
+    const t = tracks[i]; if (!t) return;
+    row.dataset.id = t.id; row.dataset.kind = t.kind;
+    row.querySelector('.trk-name').textContent = t.name;
+    row.querySelector('.trk-m').classList.toggle('on', !!t.muted);
+    row.querySelector('.trk-s').classList.toggle('on', !!t.solo);
+    const vol = row.querySelector('.trk-vol');
+    if (vol !== document.activeElement) vol.value = Math.round((t.volume ?? 1) * 100);
+  });
+}
+function headHTML(t) {
+  return `<div class="trk-head" data-id="${t.id}" data-kind="${t.kind}" style="height:${TRACK_H}px;margin-bottom:${GAP}px">
+    <div class="trk-top">
+      <span class="trk-ic"></span><span class="trk-name"></span>
+      <button class="trk-btn trk-m" title="Mute track">M</button>
+      <button class="trk-btn trk-s" title="Solo track">S</button>
+    </div>
+    <input class="trk-vol" type="range" min="0" max="150" value="100" title="Track volume">
+  </div>`;
+}
+function wireHeaderRow(row) {
+  const id = row.dataset.id;
+  const get = () => S.state.project.tracks.find((x) => x.id === id);
+  row.querySelector('.trk-m').addEventListener('click', () => { const t = get(); if (t) S.setTrack(id, { muted: !t.muted }); });
+  row.querySelector('.trk-s').addEventListener('click', () => { const t = get(); if (t) S.setTrack(id, { solo: !t.solo }); });
+  // live during drag: mutate volume + nudge (preview re-applies the gain); persisted on the same emit.
+  row.querySelector('.trk-vol').addEventListener('input', (e) => { const t = get(); if (t) { t.volume = +e.target.value / 100; S.nudge('tracks'); } });
 }
 
 // ---- geometry ----

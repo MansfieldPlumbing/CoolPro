@@ -22,8 +22,8 @@ function defaultProject() {
     name: 'Untitled project',
     fps: 30, width: 1280, height: 720,
     tracks: [
-      { id: uid('trk'), kind: 'video', name: 'Video 1', muted: false, volume: 1, clips: [] },
-      { id: uid('trk'), kind: 'audio', name: 'Audio 1', muted: false, volume: 1, clips: [] },
+      { id: uid('trk'), kind: 'video', name: 'Video 1', muted: false, solo: false, volume: 1, clips: [] },
+      { id: uid('trk'), kind: 'audio', name: 'Audio 1', muted: false, solo: false, volume: 1, clips: [] },
     ],
   };
 }
@@ -50,8 +50,22 @@ export function addMedia(m) { media.set(m.id, m); emit('media'); return m; }
 export function addTrack(kind) {
   const n = state.project.tracks.filter((t) => t.kind === kind).length + 1;
   state.project.tracks.push({ id: uid('trk'), kind, name: `${kind === 'video' ? 'Video' : 'Audio'} ${n}`,
-    muted: false, volume: 1, clips: [] });
+    muted: false, solo: false, volume: 1, clips: [] });
   emit('tracks');
+}
+
+// Per-track mutation (mute / solo / volume / name) — the timeline header strip drives this.
+export function setTrack(id, props) {
+  const t = state.project.tracks.find((x) => x.id === id); if (!t) return;
+  Object.assign(t, props); emit('tracks');
+}
+
+// The audible gain for a clip = track gain × clip gain, with mute and solo applied. Solo on ANY
+// track silences every non-soloed track. Both preview (live) and export (mixdown) read this.
+export function trackGain(track, clip) {
+  const anySolo = state.project.tracks.some((t) => t.solo);
+  const muted = track.muted || (anySolo && !track.solo);
+  return muted ? 0 : (track.volume ?? 1) * (clip.volume ?? 1);
 }
 
 // Place a media item on the first compatible track at time t0 (default: end of that track).

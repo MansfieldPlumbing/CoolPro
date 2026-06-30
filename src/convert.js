@@ -3,7 +3,7 @@
 // run on-device (ffmpeg.wasm for audio/video, RMBG for image cut-out) and the result goes to the
 // OS share sheet (→ Files, messaging, anywhere), a download, or onto the editor timeline.
 import { toast } from './hud.js';
-import { extractWav, transcodeToMp4 } from './ffmpeg.js';
+import { extractWav, transcodeToMp4, trimVideo, outpaintVideo, stitchVideos } from './ffmpeg.js';
 import { encodeMp3, shareOrDownload, download, safe } from './export.js';
 import { ctx as audioCtx } from './audio.js';
 import { importFiles } from './media.js';
@@ -18,6 +18,8 @@ function optionsFor(file) {
   if (kind === 'video') return [
     { label: '🎵 Extract audio → MP3', run: (f, s) => toAudio(f, 'mp3', stem, s) },
     { label: '🎵 Extract audio → WAV', run: (f, s) => toAudio(f, 'wav', stem, s) },
+    { label: '✂️ Trim video', trim: true },
+    { label: '🖼️ Outpaint (blurred extend)', run: (f, s) => toOutpaint(f, stem, s) },
     { label: '🎬 Convert video → MP4', run: (f, s) => toMp4(f, stem, s) },
     { label: '➕ Add to timeline', timeline: true },
   ];
@@ -61,8 +63,42 @@ function renderOptions(back, file, close) {
   body.querySelectorAll('.cv-opt').forEach((b) => b.addEventListener('click', async () => {
     const opt = opts[+b.dataset.i];
     if (opt.timeline) { await importFiles([file]); switchTo('editor'); close(); toast('Added to the timeline'); return; }
+    if (opt.trim) { renderTrim(back, file, close); return; }
     await convertAndShow(back, file, opt, close);
   }));
+}
+
+// Trim: a tiny start/end form (prefilled from the video's duration), then run the ffmpeg trim.
+async function renderTrim(back, file, close) {
+  const body = $('.cv-body', back);
+  const stem = (file.name || 'video').replace(/\.\w+$/, '');
+  body.innerHTML = `<div class="cv-progress"><div class="cv-status">Reading duration…</div></div>`;
+  const dur = await probeDuration(file).catch(() => 0);
+  body.innerHTML = `
+    <div class="cv-form">
+      <label>Start (s)<input id="cvA" type="number" min="0" step="0.1" value="0"></label>
+      <label>End (s)<input id="cvB" type="number" min="0" step="0.1" value="${dur ? dur.toFixed(1) : ''}"></label>
+      ${dur ? `<div class="cv-hint">Clip is ${dur.toFixed(1)}s long.</div>` : ''}
+      <div class="cv-actions">
+        <button class="btn primary" data-go>✂️ Trim</button>
+        <button class="cv-again">Back</button>
+      </div>
+    </div>`;
+  $('.cv-again', body).addEventListener('click', () => renderOptions(back, file, close));
+  $('[data-go]', body).addEventListener('click', () => {
+    const a = parseFloat($('#cvA', body).value) || 0;
+    const b = parseFloat($('#cvB', body).value) || (dur || a + 1);
+    if (b <= a) return toast('End must be after start', { ms: 2200 });
+    convertAndShow(back, file, { run: (f, s) => toTrim(f, a, b, stem, s) }, close);
+  });
+}
+function probeDuration(file) {
+  return new Promise((res, rej) => {
+    const v = document.createElement('video'); v.preload = 'metadata';
+    v.onloadedmetadata = () => { res(v.duration); URL.revokeObjectURL(v.src); };
+    v.onerror = () => rej(new Error('probe failed'));
+    v.src = URL.createObjectURL(file);
+  });
 }
 
 async function convertAndShow(back, file, opt, close) {
@@ -109,6 +145,15 @@ async function toAudio(file, fmt, stem, onStatus) {
 async function toMp4(file, stem, onStatus) {
   return { blob: await transcodeToMp4(file, { onStatus }), name: `${safe(stem)}.mp4` };
 }
+async function toTrim(file, a, b, stem, onStatus) {
+  return { blob: await trimVideo(file, { startSec: a, endSec: b, onStatus }), name: `${safe(stem)}-trim.mp4` };
+}
+async function toOutpaint(file, stem, onStatus) {
+  return { blob: await outpaintVideo(file, { factor: 1.3, onStatus }), name: `${safe(stem)}-outpaint.mp4` };
+}
+async function toStitch(files, onStatus) {
+  return { blob: await stitchVideos(files, { onStatus }), name: `stitched-${files.length}.mp4` };
+}
 async function toImage(file, fmt, stem, onStatus) {
   onStatus('Converting…');
   const img = await loadImg(URL.createObjectURL(file));
@@ -148,4 +193,31 @@ export function pickAndConvert() {
   inp.type = 'file'; inp.accept = 'video/*,audio/*,image/*';
   inp.addEventListener('change', () => { if (inp.files && inp.files[0]) openConvert(inp.files[0]); });
   inp.click();
+}
+
+// The launcher "Stitch" entry: pick several videos and concatenate them end to end.
+export function pickAndStitch() {
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = 'video/*'; inp.multiple = true;
+  inp.addEventListener('change', () => {
+    const files = [...(inp.files || [])].filter(Boolean);
+    if (files.length < 2) return toast('Pick at least two videos to stitch.', { ms: 2800 });
+    openStitch(files);
+  });
+  inp.click();
+}
+export function openStitch(files) {
+  const back = document.createElement('div');
+  back.className = 'cv-back';
+  back.innerHTML = `
+    <div class="cv-card">
+      <div class="cv-head"><div><b>Stitch</b><span class="cv-file">${files.length} videos · end to end</span></div>
+        <button class="cv-x" title="Close">✕</button></div>
+      <div class="cv-body"></div>
+    </div>`;
+  document.body.appendChild(back);
+  const close = () => back.remove();
+  back.addEventListener('click', (e) => { if (e.target === back) close(); });
+  $('.cv-x', back).addEventListener('click', close);
+  convertAndShow(back, files, { run: (fs, s) => toStitch(fs, s) }, close);
 }

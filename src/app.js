@@ -19,6 +19,7 @@ function boot() {
   initAddons();
   wireMediaBin();
   wireTopbar();
+  wireEditorMenu();
   wireTransport();
   wireKeyboard();
   // PWA install/update + CDN package cache
@@ -26,11 +27,43 @@ function boot() {
   CDN.init().catch(() => {});
   // restore any saved project
   S.load().then((ok) => { if (ok) { renderBin(); toast('Restored your last project'); } });
-  S.subscribe((r) => { if (['media','load'].includes(r)) renderBin(); if (r === 'transport' || r === 'load') renderTransport(); if (r === 'project') $('#projName').value = S.state.project.name; });
+  S.subscribe((r) => {
+    if (['media','load'].includes(r)) renderBin();
+    if (r === 'transport' || r === 'load') renderTransport();
+    if (r === 'project') $('#projName').value = S.state.project.name;
+    renderStatus();
+  });
   // Form-factor change (phone ⇄ desktop): the editor's grid reflows, so the canvas-based
   // timeline & preview must recompute against their new container widths.
   onViewport(() => requestAnimationFrame(() => { renderTimeline(); drawAt(S.state.transport.time); }));
-  renderBin(); renderTransport();
+  renderBin(); renderTransport(); renderStatus();
+}
+
+// ---- hamburger menu (obp): toggle the sheet; proxy items click the real (possibly hidden) buttons --
+function wireEditorMenu() {
+  const veil = $('#editorMenu'), btn = $('#btnEditorMenu');
+  if (!veil || !btn) return;
+  btn.addEventListener('click', (e) => { e.stopPropagation(); veil.classList.toggle('open'); });
+  veil.addEventListener('click', (e) => { if (e.target === veil) veil.classList.remove('open'); });
+  $$('.menu-item[data-proxy]', veil).forEach((it) => it.addEventListener('click', () => {
+    veil.classList.remove('open');
+    const t = document.getElementById(it.dataset.proxy); if (t) t.click();
+  }));
+  // btnAddons/btnInstall keep their own handlers (wired in wireTopbar / addons.js); just close after.
+  $$('.menu-item:not([data-proxy])', veil).forEach((it) => it.addEventListener('click', () => veil.classList.remove('open')));
+}
+
+// ---- status bar: selection on the left, project facts on the right ----
+function renderStatus() {
+  const p = S.state.project, clips = S.allClips().length;
+  const res = $('#stRes'), fps = $('#stFps'), cl = $('#stClips'), left = $('#stLeft');
+  if (res) res.textContent = `${p.width}×${p.height}`;
+  if (fps) fps.textContent = `${p.fps || 30} fps`;
+  if (cl) cl.textContent = `${clips} clip${clips === 1 ? '' : 's'}`;
+  if (!left) return;
+  const sel = S.state.selection && S.findClip(S.state.selection);
+  if (sel) { const m = S.media.get(sel.clip.mediaId); left.textContent = `${m ? m.name : 'Clip'} · ${sel.clip.kind} · ${fmtTime(sel.clip.dur)}`; }
+  else left.textContent = clips ? 'Ready' : 'Drop media to begin';
 }
 
 // ---- media bin ----------------------------------------------------------

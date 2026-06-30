@@ -55,7 +55,7 @@ async function mixdown(onStatus) {
     const buf = await bufferFor(m); if (!buf) continue;
     const src = off.createBufferSource(); src.buffer = buf;
     const g = off.createGain();
-    g.gain.value = track.muted ? 0 : (track.volume ?? 1) * (clip.volume ?? 1);
+    g.gain.value = S.trackGain(track, clip);
     src.connect(g); g.connect(masterGain);
     src.start(clip.t0, clip.in, clip.dur);
   }

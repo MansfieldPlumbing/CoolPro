@@ -19,7 +19,7 @@ export function initPreview() {
   S.subscribe((reason) => {
     if (reason === 'project' || reason === 'load') sizeCanvas();
     if (reason === 'transport' && !S.state.transport.playing) drawAt(S.state.transport.time);
-    if (['load', 'clip-add', 'clip-remove'].includes(reason)) drawAt(S.state.transport.time);
+    if (['load', 'clip-add', 'clip-remove', 'tracks'].includes(reason)) drawAt(S.state.transport.time);
   });
   drawAt(0);
 }
@@ -118,7 +118,7 @@ function render(t, playing) {
     const el = elFor(m);
     const target = clip.in + (t - clip.t0);
     const gain = graphFor(el).gain;
-    const vol = track.muted ? 0 : (track.volume ?? 1) * (clip.volume ?? 1);
+    const vol = S.trackGain(track, clip);
     if (gain) gain.gain.value = vol;
     if (playing) {
       if (Math.abs(el.currentTime - target) > 0.3 || el.seeking) { try { el.currentTime = target; } catch (_) {} }

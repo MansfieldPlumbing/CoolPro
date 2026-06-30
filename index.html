@@ -17,6 +17,15 @@
       document.documentElement.dataset.vp = (p === 'desktop' || p === 'phone') ? p
         : ((window.innerWidth || 1024) >= 820 ? 'desktop' : 'phone');
     } catch (e) { document.documentElement.dataset.vp = 'desktop'; }
+    // theme, applied before paint (no flash): mirrors src/theme-engine.js
+    try { var R = document.documentElement, m = localStorage.getItem('coolpro-mode') || 'dark';
+      if (m === 'auto') m = (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+      R.dataset.mode = m;
+      if (m === 'light') { var L = {'--bg':'#eef1f6','--surface':'#ffffff','--surface-2':'#e7eaf1','--panel':'#f4f6fa','--border':'#d7dce6','--border-2':'#c2c9d8','--fg':'#1a1d24','--muted':'#5c6474','--faint':'#9aa2b2','--mica-rgb':'255 255 255'}; for (var k in L) R.style.setProperty(k, L[k]); }
+      var a = localStorage.getItem('coolpro-accent'); if (a) R.style.setProperty('--accent', a);
+      R.dataset.mica = (localStorage.getItem('coolpro-mica') === 'off') ? 'off' : 'on';
+      var o = localStorage.getItem('coolpro-opacity'); if (o) R.style.setProperty('--transparency', o);
+    } catch (e) {}
   </script>
 </head>
 <body data-app="editor">
@@ -35,27 +44,40 @@
     <div id="stage" class="stage-host">
       <!-- ── launcher: the front door (phone-first — arrive at a chooser, not a surface) ── -->
       <section id="surface-home" class="surface">
-        <div class="launcher">
-          <div class="launcher-head">
-            <h1>Cool<span class="no">Pro</span></h1>
-            <p>FOSS on-device studio — video, audio, image &amp; 3D. Pick a surface.</p>
-          </div>
-          <div id="launchGrid" class="launch-grid"></div>
+        <div class="nv-root">
+          <div class="nv-head"><h1>Cool<span class="no">Pro</span></h1></div>
+          <div id="navCrumbs" class="nv-crumbs"></div>
+          <div id="navHost" class="nv-host"></div>
         </div>
       </section>
 
       <!-- ── native surface: the CapCut-style A/V editor ── -->
       <section id="surface-editor" class="surface" hidden>
         <div id="app">
-          <!-- top bar -->
-          <header class="topbar">
+          <!-- obp command ribbon: an icon cluster + a hamburger holding the full menu tree -->
+          <header class="topbar obp-bar">
+            <button id="btnEditorMenu" class="ribbon-btn icon" title="Menu" aria-haspopup="true"><span class="nf">&#xf0c9;</span></button>
+            <span class="ribbon-div"></span>
             <input id="projName" class="proj-name" value="Untitled project" spellcheck="false" />
             <div class="spacer"></div>
-            <button id="btnInstall" class="btn ghost" title="Install app" hidden>📲 Install</button>
-            <button id="btnAddons" class="btn ghost" title="Add-ons & CDN cache">🧩 Add-ons</button>
-            <button id="btnSave" class="btn ghost" title="Save to browser storage">💾 Save</button>
-            <button id="btnExport" class="btn primary">⤓ Export</button>
+            <button id="btnSave" class="ribbon-btn icon" title="Save project to browser storage"><span class="nf">&#xf0c7;</span></button>
+            <button id="btnExport" class="ribbon-btn primary" title="Export"><span class="nf">&#xf019;</span><span class="lbl">Export</span></button>
           </header>
+
+          <!-- hamburger sheet — the full File/Tracks/App tree (obp pattern), one tap from the ribbon -->
+          <div id="editorMenu" class="menu-veil">
+            <div class="menu-sheet" role="menu">
+              <div class="menu-group">File</div>
+              <button class="menu-item" data-proxy="btnSave"><span class="nf">&#xf0c7;</span> Save project</button>
+              <button class="menu-item" data-proxy="btnExport"><span class="nf">&#xf019;</span> Export…</button>
+              <div class="menu-group">Tracks</div>
+              <button class="menu-item" data-proxy="btnAddVideoTrack"><span class="mi-plus">＋</span> Add video track</button>
+              <button class="menu-item" data-proxy="btnAddAudioTrack"><span class="mi-plus">＋</span> Add audio track</button>
+              <div class="menu-group">App</div>
+              <button class="menu-item" id="btnAddons"><span class="nf">&#xf013;</span> Add-ons &amp; CDN cache</button>
+              <button class="menu-item" id="btnInstall" hidden><span class="nf">&#xf019;</span> Install app</button>
+            </div>
+          </div>
 
           <!-- left: media bin -->
           <aside class="side left">
@@ -77,8 +99,8 @@
               <button id="btnPlay" class="tbtn play" title="Play / Pause (Space)">▶</button>
               <button id="btnToEnd" class="tbtn" title="To end">⏭</button>
               <div class="spacer"></div>
-              <button id="btnSplit" class="btn ghost" title="Split clip at playhead (S)">✂ Split</button>
-              <button id="btnDelete" class="btn ghost" title="Delete selected clip (Del)">🗑 Delete</button>
+              <button id="btnSplit" class="btn ghost" title="Split clip at playhead (S)"><span class="nf">&#xf0c4;</span> Split</button>
+              <button id="btnDelete" class="btn ghost" title="Delete selected clip (Del)"><span class="nf">&#xf1f8;</span> Delete</button>
             </div>
           </main>
 
@@ -109,13 +131,26 @@
                 <input id="tlZoom" type="range" min="20" max="400" value="90" />
               </div>
             </div>
-            <div class="tl-scroll" id="tlScroll">
-              <div class="tl-canvas-wrap" id="tlWrap">
-                <canvas id="tl-canvas"></canvas>
-                <div id="tl-playhead"></div>
+            <div class="tl-body">
+              <div class="tl-headers" id="tlHeaders"><div class="tl-headers-inner" id="tlHeadersInner"></div></div>
+              <div class="tl-scroll" id="tlScroll">
+                <div class="tl-canvas-wrap" id="tlWrap">
+                  <canvas id="tl-canvas"></canvas>
+                  <div id="tl-playhead"></div>
+                </div>
               </div>
             </div>
           </section>
+
+          <!-- status bar (obp) — selection on the left, project facts on the right -->
+          <footer class="ed-status">
+            <div id="stLeft" class="st-left">Ready</div>
+            <div class="st-right">
+              <span id="stRes" class="nf-mono">1280×720</span>
+              <span id="stFps" class="nf-mono">30 fps</span>
+              <span id="stClips" class="nf-mono">0 clips</span>
+            </div>
+          </footer>
         </div>
       </section>
 
@@ -128,10 +163,11 @@
 
   <script type="module" src="src/app.js"></script>
   <script type="module">
+    import { initThemeEngine } from './src/theme-engine.js';
     import { initViewport } from './src/viewport.js';
     import { initShell } from './src/shell.js';
     import { initShare } from './src/share.js';
-    function boot() { initViewport(); initShell(); initShare(); }
+    function boot() { initThemeEngine(); initViewport(); initShell(); initShare(); }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
     else boot();
   </script>

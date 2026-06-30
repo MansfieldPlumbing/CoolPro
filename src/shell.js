@@ -34,27 +34,12 @@ function buildRail() {
   rail.querySelectorAll('.app-tab').forEach((b) => b.addEventListener('click', () => switchTo(b.dataset.app)));
 }
 
-// The Launcher front door — big tiles for each surface, projected from the registry. One column
-// on phone, a grid on desktop (the layout follows :root[data-vp], not this code).
+// The Launcher front door — a composable drill-down (settings.obp shape): first-class templates
+// across every surface, projected by the nav engine from launcher.js's tree.
 function buildLauncher() {
-  const host = document.getElementById('launchGrid');
-  if (!host) return;
-  const tiles = Registry.tiles().map((r) =>
-    `<button class="launch-tile" data-app="${r.id}">
-       <span class="ic">${r.icon}</span>
-       <span class="meta"><span class="nm">${escHtml(r.name)}</span><span class="bl">${escHtml(r.blurb)}</span></span>
-     </button>`).join('');
-  // Convert is a quick action, not a surface: pick/share a file → options → share the result out.
-  const convertTile =
-    `<button class="launch-tile" data-action="convert">
-       <span class="ic">⇄</span>
-       <span class="meta"><span class="nm">Convert</span><span class="bl">Open a video/audio/image → extract audio, convert, remove background → share it back out.</span></span>
-     </button>`;
-  host.innerHTML = tiles + convertTile;
-  host.querySelectorAll('.launch-tile').forEach((b) => b.addEventListener('click', () => {
-    if (b.dataset.action === 'convert') import('./convert.js').then((m) => m.pickAndConvert());
-    else switchTo(b.dataset.app);
-  }));
+  const host = document.getElementById('navHost'), crumbs = document.getElementById('navCrumbs');
+  if (!host || !crumbs) return;
+  import('./launcher.js').then((m) => m.initLauncher(host, crumbs, { switchTo }));
 }
 
 function wireChrome() {
