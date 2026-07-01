@@ -13,6 +13,32 @@ import { toggle as vpToggle, mode as vpMode, isForced, subscribe as onViewport }
 let active = null;
 let guestHost = null;
 const mounted = new Map();   // id -> presenter (warm)
+const subs = new Set();      // taskbar et al. — notified when active/warm state changes
+
+// --- multitasking surface (the taskbar reads these) -------------------------------------------
+// Every offered surface, with its live state: `warm` = a presenter is mounted and kept alive
+// (its document survives a switch), `active` = it's the one on stage right now.
+export function openSurfaces() {
+  return Registry.tiles().map((r) => ({
+    id: r.id, name: r.name, icon: r.icon, kind: r.kind,
+    warm: mounted.has(r.id), active: !!active && active.id === r.id,
+  }));
+}
+export function activeId() { return active ? active.id : null; }
+export function subscribe(fn) { subs.add(fn); return () => subs.delete(fn); }
+function notify() { for (const f of subs) { try { f(); } catch (_) {} } }
+
+// Close a warm guest to free its memory (iframe + listeners). The native editor is the resting
+// surface — never closed. If the closing guest is on stage, leave for the editor first.
+export async function closeSurface(id) {
+  const rec = Registry.resolve(id);
+  const p = mounted.get(id);
+  if (!p || !rec || rec.kind !== 'guest') return;
+  if (active === p) await switchTo('editor');   // switchTo will notify; reveals editor, hides guests
+  p.unmount();
+  mounted.delete(id);
+  notify();
+}
 
 export function initShell() {
   guestHost = document.getElementById('stage-guests');
@@ -81,6 +107,7 @@ export async function switchTo(id) {
   document.querySelectorAll('.app-tab').forEach((t) => t.classList.toggle('active', t.dataset.app === id));
   document.body.dataset.app = id;
   renderMenu(p);
+  notify();
 }
 
 // Present a presenter's contributed verbs (grouped by menu), or clear when it has none.

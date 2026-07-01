@@ -114,6 +114,25 @@ export function removeClip(id) {
     if (i >= 0) { t.clips.splice(i, 1); if (state.selection === id) state.selection = null; emit('clip-remove'); return; }
   }
 }
+export function duplicateClip(id) {
+  const f = findClip(id); if (!f) return null;
+  const copy = { ...f.clip, id: uid('clip'), t0: f.clip.t0 + f.clip.dur, fx: { ...f.clip.fx } };
+  f.track.clips.push(copy); state.selection = copy.id; emit('clip-add'); return copy;
+}
+export function removeTrack(id) {
+  const ts = state.project.tracks;
+  if (ts.length <= 1) return;                       // keep at least one track
+  const i = ts.findIndex((t) => t.id === id); if (i < 0) return;
+  if (ts[i].clips.some((c) => c.id === state.selection)) state.selection = null;
+  ts.splice(i, 1); emit('tracks');
+}
+export function removeMedia(id) {
+  for (const t of state.project.tracks) t.clips = t.clips.filter((c) => c.mediaId !== id);
+  const m = media.get(id); if (m && m.url) { try { URL.revokeObjectURL(m.url); } catch (_) {} }
+  media.delete(id);
+  if (state.selection && !findClip(state.selection)) state.selection = null;
+  emit('media');
+}
 export function select(id) { state.selection = id; emit('select'); }
 export function setTransport(p) { Object.assign(state.transport, p); emit('transport'); }
 export function setProject(p) { Object.assign(state.project, p); emit('project'); }

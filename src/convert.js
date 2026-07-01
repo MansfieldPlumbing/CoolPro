@@ -3,7 +3,7 @@
 // run on-device (ffmpeg.wasm for audio/video, RMBG for image cut-out) and the result goes to the
 // OS share sheet (→ Files, messaging, anywhere), a download, or onto the editor timeline.
 import { toast } from './hud.js';
-import { extractWav, transcodeToMp4, trimVideo, outpaintVideo, stitchVideos } from './ffmpeg.js';
+import { extractWav, transcodeToMp4, trimVideo, trimAudioWav, outpaintVideo, stitchVideos } from './ffmpeg.js';
 import { encodeMp3, shareOrDownload, download, safe } from './export.js';
 import { ctx as audioCtx } from './audio.js';
 import { importFiles } from './media.js';
@@ -24,6 +24,7 @@ function optionsFor(file) {
     { label: '➕ Add to timeline', timeline: true },
   ];
   if (kind === 'audio') return [
+    { label: '✂️ Trim / ringtone → MP3', trim: true },
     { label: '🎵 Convert → MP3', run: (f, s) => toAudio(f, 'mp3', stem, s) },
     { label: '🎵 Convert → WAV', run: (f, s) => toAudio(f, 'wav', stem, s) },
     { label: '➕ Add to timeline', timeline: true },
@@ -89,7 +90,8 @@ async function renderTrim(back, file, close) {
     const a = parseFloat($('#cvA', body).value) || 0;
     const b = parseFloat($('#cvB', body).value) || (dur || a + 1);
     if (b <= a) return toast('End must be after start', { ms: 2200 });
-    convertAndShow(back, file, { run: (f, s) => toTrim(f, a, b, stem, s) }, close);
+    const run = kindOf(file) === 'audio' ? (f, s) => toRingtone(f, a, b, stem, s) : (f, s) => toTrim(f, a, b, stem, s);
+    convertAndShow(back, file, { run }, close);
   });
 }
 function probeDuration(file) {
@@ -148,6 +150,13 @@ async function toMp4(file, stem, onStatus) {
 async function toTrim(file, a, b, stem, onStatus) {
   return { blob: await trimVideo(file, { startSec: a, endSec: b, onStatus }), name: `${safe(stem)}-trim.mp4` };
 }
+// Ringtone / cut audio: ffmpeg trims to a guaranteed WAV, then lamejs encodes MP3 (the extract-audio path).
+async function toRingtone(file, a, b, stem, onStatus) {
+  const wav = await trimAudioWav(file, { startSec: a, endSec: b, onStatus });
+  onStatus?.('Encoding MP3…');
+  const buf = await audioCtx().decodeAudioData(await wav.arrayBuffer());
+  return { blob: await encodeMp3(buf), name: `${safe(stem)}-clip.mp3` };
+}
 async function toOutpaint(file, stem, onStatus) {
   return { blob: await outpaintVideo(file, { factor: 1.3, onStatus }), name: `${safe(stem)}-outpaint.mp4` };
 }
@@ -195,13 +204,38 @@ export function pickAndConvert() {
   inp.click();
 }
 
-// The launcher "Stitch" entry: pick several videos and concatenate them end to end.
-export function pickAndStitch() {
+// The launcher "Trim / cut / ringtone" entries: pick one file (of `accept`) and jump straight to
+// the trim form — audio yields an MP3 clip, video an MP4.
+export function pickAndTrim(accept = 'video/*,audio/*') {
   const inp = document.createElement('input');
-  inp.type = 'file'; inp.accept = 'video/*'; inp.multiple = true;
+  inp.type = 'file'; inp.accept = accept;
+  inp.addEventListener('change', () => { if (inp.files && inp.files[0]) openTrim(inp.files[0]); });
+  inp.click();
+}
+export function openTrim(file) {
+  if (!file) return;
+  const back = document.createElement('div');
+  back.className = 'cv-back';
+  back.innerHTML = `
+    <div class="cv-card">
+      <div class="cv-head"><div><b>Trim</b><span class="cv-file">${esc(file.name || 'media')} · ${kindOf(file)} · ${fmtBytes(file.size)}</span></div>
+        <button class="cv-x" title="Close">✕</button></div>
+      <div class="cv-body"></div>
+    </div>`;
+  document.body.appendChild(back);
+  const close = () => back.remove();
+  back.addEventListener('click', (e) => { if (e.target === back) close(); });
+  $('.cv-x', back).addEventListener('click', close);
+  renderTrim(back, file, close);
+}
+
+// The launcher "Stitch" entry: pick several clips (of `accept`) and concatenate them end to end.
+export function pickAndStitch(accept = 'video/*') {
+  const inp = document.createElement('input');
+  inp.type = 'file'; inp.accept = accept; inp.multiple = true;
   inp.addEventListener('change', () => {
     const files = [...(inp.files || [])].filter(Boolean);
-    if (files.length < 2) return toast('Pick at least two videos to stitch.', { ms: 2800 });
+    if (files.length < 2) return toast('Pick at least two files to stitch.', { ms: 2800 });
     openStitch(files);
   });
   inp.click();

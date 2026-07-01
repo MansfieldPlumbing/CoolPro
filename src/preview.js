@@ -16,12 +16,42 @@ let throughTick = null, throughDone = null;
 export function initPreview() {
   canvas = $('#preview'); g = canvas.getContext('2d');
   sizeCanvas();
+  initPreviewViewport();
   S.subscribe((reason) => {
     if (reason === 'project' || reason === 'load') sizeCanvas();
     if (reason === 'transport' && !S.state.transport.playing) drawAt(S.state.transport.time);
     if (['load', 'clip-add', 'clip-remove', 'tracks'].includes(reason)) drawAt(S.state.transport.time);
   });
   drawAt(0);
+}
+
+// ---- pasteboard pan/zoom (flickpaint's #stage transform, ported) ----------------------------
+// The artboard (#preview) sits on the infinite checker; #previewStage is the transform host.
+// The preview is output-only here (painting happens in the paint guest), so a pan/zoom transform
+// is purely visual and never interferes with input.
+let pvStage, pv = { s: 1, x: 0, y: 0 };
+function applyPv() { if (pvStage) pvStage.style.transform = `translate(${pv.x}px,${pv.y}px) scale(${pv.s})`; }
+function zoomBy(f) { pv.s = clamp(pv.s * f, 0.2, 8); applyPv(); }
+export function fitPreview() { pv = { s: 1, x: 0, y: 0 }; applyPv(); }
+function initPreviewViewport() {
+  pvStage = $('#previewStage');
+  const vp = pvStage && pvStage.parentElement;       // .viewport.pasteboard
+  if (!vp) return;
+  vp.addEventListener('wheel', (e) => { e.preventDefault(); zoomBy(e.deltaY < 0 ? 1.12 : 1 / 1.12); }, { passive: false });
+  let drag = false, sx = 0, sy = 0, ox = 0, oy = 0;
+  vp.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('.pv-zoom')) return;        // let the HUD buttons click
+    drag = true; sx = e.clientX; sy = e.clientY; ox = pv.x; oy = pv.y;
+    try { vp.setPointerCapture(e.pointerId); } catch (_) {}
+  });
+  vp.addEventListener('pointermove', (e) => { if (!drag) return; pv.x = ox + (e.clientX - sx); pv.y = oy + (e.clientY - sy); applyPv(); });
+  const end = (e) => { drag = false; try { vp.releasePointerCapture(e.pointerId); } catch (_) {} };
+  vp.addEventListener('pointerup', end); vp.addEventListener('pointercancel', end);
+  vp.addEventListener('dblclick', fitPreview);
+  $('#pvZoomIn')?.addEventListener('click', () => zoomBy(1.25));
+  $('#pvZoomOut')?.addEventListener('click', () => zoomBy(1 / 1.25));
+  $('#pvZoomFit')?.addEventListener('click', fitPreview);
+  applyPv();
 }
 
 function sizeCanvas() {

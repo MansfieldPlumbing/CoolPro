@@ -2,6 +2,7 @@
 // (scrub, select, drag-move, edge-trim) and a DOM playhead. Reads/writes the store.
 import { $, clamp } from './util.js';
 import * as S from './store.js';
+import { attachContextMenu, openMenu } from './contextmenu.js';
 
 const RULER_H = 24, TRACK_H = 58, GAP = 6;
 let cv, ctx, scroll, wrap, playhead, heads, headsInner;
@@ -22,6 +23,7 @@ export function initTimeline() {
 
   $('#tlZoom').addEventListener('input', (e) => { pxPerSec = +e.target.value; render(); });
   cv.addEventListener('pointerdown', onDown);
+  cv.addEventListener('contextmenu', (e) => { e.preventDefault(); const { x, y } = localXY(e); if (y >= RULER_H) canvasMenu(e.clientX, e.clientY, x, y); });
   window.addEventListener('pointermove', onMove);
   window.addEventListener('pointerup', onUp);
   S.subscribe((reason) => {
@@ -72,7 +74,51 @@ function wireHeaderRow(row) {
   row.querySelector('.trk-s').addEventListener('click', () => { const t = get(); if (t) S.setTrack(id, { solo: !t.solo }); });
   // live during drag: mutate volume + nudge (preview re-applies the gain); persisted on the same emit.
   row.querySelector('.trk-vol').addEventListener('input', (e) => { const t = get(); if (t) { t.volume = +e.target.value / 100; S.nudge('tracks'); } });
+  attachContextMenu(row, () => trackMenu(get()));
 }
+
+// ---- context menus (long-press / right-click) ----
+function trackMenu(t) {
+  if (!t) return [];
+  const last = S.state.project.tracks.length <= 1;
+  return [
+    { label: 'Rename track…', icon: '✎', run: () => { const n = prompt('Track name', t.name); if (n != null && n.trim()) S.setTrack(t.id, { name: n.trim() }); } },
+    '-',
+    { label: 'Mute', icon: '🔇', checked: !!t.muted, run: () => S.setTrack(t.id, { muted: !t.muted }) },
+    { label: 'Solo', icon: '◉', checked: !!t.solo, run: () => S.setTrack(t.id, { solo: !t.solo }) },
+    '-',
+    { label: 'Add video track', icon: '＋', run: () => S.addTrack('video') },
+    { label: 'Add audio track', icon: '＋', run: () => S.addTrack('audio') },
+    '-',
+    { label: 'Delete track', icon: '🗑', danger: true, disabled: last, run: () => S.removeTrack(t.id) },
+  ];
+}
+function clipMenu(clip) {
+  return [
+    { label: 'Split at playhead', icon: '✂', run: () => S.splitClipAt(clip.id, S.state.transport.time) },
+    { label: 'Duplicate', icon: '⧉', run: () => S.duplicateClip(clip.id) },
+    '-',
+    { label: 'Delete clip', icon: '🗑', danger: true, run: () => S.removeClip(clip.id) },
+  ];
+}
+// Open the right menu for whatever is under a canvas point (screen px for placement, local px to hit-test).
+function canvasMenu(clientX, clientY, x, y) {
+  const hit = hitClip(x, y);
+  if (hit) { S.select(hit.clip.id); openMenu(clientX, clientY, clipMenu(hit.clip)); return; }
+  const ti = trackAtY(y); const t = ti >= 0 && S.state.project.tracks[ti];
+  if (t) openMenu(clientX, clientY, trackMenu(t));
+}
+
+// long-press on the canvas → context menu (fires only if held still over a lane; cancels the drag).
+let lpTimer = null, lpCX = 0, lpCY = 0;
+function armLongPress(e, x, y) {
+  clearLongPress();
+  if (y < RULER_H) return;
+  lpCX = e.clientX; lpCY = e.clientY;
+  lpTimer = setTimeout(() => { lpTimer = null; drag = null; canvasMenu(lpCX, lpCY, x, y); }, 480);
+}
+function clearLongPress() { if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; } }
+function lpMoveCheck(e) { if (lpTimer && Math.hypot(e.clientX - lpCX, e.clientY - lpCY) > 10) clearLongPress(); }
 
 // ---- geometry ----
 const xForT = (t) => t * pxPerSec;
@@ -199,6 +245,7 @@ function hitClip(x, y) {
 
 function onDown(e) {
   const { x, y } = localXY(e);
+  armLongPress(e, x, y);
   if (y < RULER_H) { drag = { mode: 'scrub' }; scrubTo(x); return; }
   const hit = hitClip(x, y);
   if (!hit) { S.select(null); drag = { mode: 'scrub' }; scrubTo(x); return; }
@@ -210,6 +257,7 @@ function onDown(e) {
 }
 
 function onMove(e) {
+  lpMoveCheck(e);
   if (!drag) { return; }
   const { x } = localXY(e);
   if (drag.mode === 'scrub') return scrubTo(x);
@@ -233,7 +281,7 @@ function onMove(e) {
     }
   }
 }
-function onUp() { drag = null; }
+function onUp() { drag = null; clearLongPress(); }
 
 function scrubTo(x) { S.setTransport({ time: Math.max(0, tForX(x)) }); }
 

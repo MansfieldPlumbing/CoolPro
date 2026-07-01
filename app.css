@@ -34,6 +34,36 @@
 .guest-frame { width: 100%; height: 100%; border: 0; display: block; background: var(--bg); }
 .guest-frame[hidden] { display: none; }
 
+/* ---- taskbar: the multitasking dock (subsystem Taskbar, ported) ----
+   A persistent strip under the stage. Chips are surfaces; a live dot marks the warm ones. Wears the
+   shared .acrylic material (class on the element) so it's the same frosted glass as flickpaint. ---- */
+.taskbar { flex-shrink: 0; display: flex; align-items: center; gap: 8px; height: 56px; padding: 0 10px;
+  border-top: 1px solid var(--border); position: relative; z-index: 40;
+  box-shadow: 0 -10px 30px -12px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,0.10); }
+.tb-vp { width: 40px; height: 40px; flex-shrink: 0; display: grid; place-items: center; cursor: pointer;
+  background: transparent; border: 1px solid transparent; border-radius: 12px; color: var(--muted);
+  font-size: 17px; transition: background .12s, color .12s; }
+.tb-vp:hover { background: var(--surface-2); color: var(--fg); }
+.tb-launch { width: 40px; height: 40px; flex-shrink: 0; display: grid; place-items: center; cursor: pointer;
+  background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; color: var(--fg);
+  font-size: 17px; transition: background .12s, transform .1s; }
+.tb-launch:hover { background: color-mix(in srgb, var(--accent) 18%, var(--surface-2)); }
+.tb-launch:active { transform: scale(.93); }
+.tb-launch.swap .tb-launch-ic { animation: tbSwap .2s ease; }
+@keyframes tbSwap { from { transform: scale(.4) rotate(-30deg); opacity: 0; } to { transform: none; opacity: 1; } }
+.tb-strip { position: relative; flex: 1; height: 46px; min-width: 0; }
+.tb-chip { position: absolute; top: 0; left: 0; width: 46px; height: 46px; display: grid; place-items: center;
+  cursor: pointer; background: transparent; border: 1px solid transparent; border-radius: 12px; color: var(--fg);
+  touch-action: none; will-change: transform; transition: background .12s, border-color .12s; }
+.tb-chip:hover { background: var(--surface-2); }
+.tb-chip.active { background: color-mix(in srgb, var(--accent) 16%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 50%, transparent); }
+.tb-ic { font-size: 22px; line-height: 1; pointer-events: none; }
+.tb-dot { position: absolute; bottom: 3px; left: 50%; transform: translateX(-50%); width: 5px; height: 5px;
+  border-radius: 50%; background: transparent; transition: background .15s; pointer-events: none; }
+.tb-chip.live .tb-dot { background: color-mix(in srgb, var(--accent) 70%, var(--fg)); }
+.tb-chip.active.live .tb-dot { background: var(--accent); }
+
 #app {
   display: grid; height: 100%; width: 100%;
   grid-template-rows: var(--r-bar) minmax(0, 1fr) minmax(160px, 38vh) var(--r-status);
@@ -47,7 +77,36 @@
 /* phone/desktop layout is driven by :root[data-vp] (src/viewport.js), not a raw media query —
    one form-factor signal, see the "phone" section at the bottom of this file. */
 
-/* ---- editor command ribbon (obp) ---- */
+/* ---- projections (Blackmagic Resolve pages): one project, several rooms. Each value of
+   data-projection rearranges the SAME panes — no DOM swap, just grid reflow. ---- */
+#app { transition: grid-template-rows .34s cubic-bezier(.2,.85,.25,1), grid-template-columns .34s cubic-bezier(.2,.85,.25,1); }
+/* both form factors: Wide & Preview drop the side panels (on phone their stacked rows then collapse). */
+#app[data-projection="wide"]    .side,
+#app[data-projection="preview"] .side { display: none; }
+/* desktop: collapse the side columns; Preview also drops the timeline row to its grip. */
+:root[data-vp="desktop"] #app[data-projection="wide"]    { grid-template-columns: 0 minmax(0,1fr) 0; }
+:root[data-vp="desktop"] #app[data-projection="preview"] { grid-template-columns: 0 minmax(0,1fr) 0;
+  grid-template-rows: var(--r-bar) minmax(0,1fr) 30px var(--r-status); }
+/* phone (6-area scroll column): Preview drops the timeline row to its grip; hidden sides self-collapse.
+   The phone min-height on .timeline would otherwise defeat the collapse, so override it here. */
+:root[data-vp="phone"] #app[data-projection="preview"] {
+  grid-template-rows: var(--r-bar) 56vh 30px auto auto var(--r-status); }
+:root[data-vp="phone"] #app[data-projection="preview"] .timeline { min-height: 30px; }
+
+/* projection switcher (deck) — segmented pill */
+.proj-switch { display: inline-flex; gap: 2px; padding: 3px; border-radius: 999px;
+  background: rgba(255,255,255,.05); border: 1px solid var(--border); }
+.proj-switch button { padding: 4px 12px; border: 0; border-radius: 999px; background: transparent;
+  color: var(--muted); font-size: 12px; cursor: pointer; transition: background .12s, color .12s; }
+.proj-switch button:hover { color: var(--fg); }
+.proj-switch button.on { background: color-mix(in srgb, var(--accent) 24%, transparent); color: var(--fg); }
+
+/* ---- editor command deck (flickpaint-shaped, .acrylic supplies the frosted glass) ---- */
+.ed-deck { grid-area: topbar; display: flex; align-items: center; gap: 6px; padding: 0 10px;
+  border-bottom: 1px solid var(--border); position: relative; z-index: 30;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06); }
+
+/* ---- legacy obp ribbon styles (kept for .ribbon-btn, reused by the deck) ---- */
 .topbar { grid-area: topbar; display: flex; align-items: center; gap: 6px;
   padding: 0 8px; background: var(--glass); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border); position: relative; z-index: 30; }
@@ -141,11 +200,24 @@
   background: var(--surface); border: 1px solid var(--border); color: var(--fg);
   border-radius: var(--radius-sm); padding: 7px 8px; font-size: 13px; }
 
-/* ---- stage / preview ---- */
+/* ---- stage / preview — reuses flickpaint's pasteboard (infinite checker + framed artboard) ---- */
 .stage { grid-area: stage; display: flex; flex-direction: column; background: var(--bg); min-width: 0; }
-.viewport { flex: 1; display: grid; place-items: center; padding: 14px; min-height: 0; }
-#preview { max-width: 100%; max-height: 100%; background: #000; border-radius: var(--radius);
-  box-shadow: var(--shadow); }
+.viewport { flex: 1; position: relative; overflow: hidden; min-height: 0; }
+.viewport.pasteboard { background-color: #2b2b2e;
+  background-image:
+    linear-gradient(45deg,#34343a 25%,transparent 25%,transparent 75%,#34343a 75%,#34343a),
+    linear-gradient(45deg,#34343a 25%,transparent 25%,transparent 75%,#34343a 75%,#34343a);
+  background-size: 36px 36px; background-position: 0 0, 18px 18px; touch-action: none; }
+.preview-stage { position: absolute; inset: 0; display: grid; place-items: center; padding: 18px;
+  transform-origin: center center; will-change: transform; }
+#preview { max-width: 100%; max-height: 100%; background: #000; border-radius: 2px;
+  box-shadow: 0 0 0 1px rgba(255,255,255,.14), 0 24px 60px -12px rgba(0,0,0,.8); }
+/* zoom HUD — pinchless, thumb-friendly (the pasteboard's explicit zoom controls) */
+.pv-zoom { position: absolute; right: 12px; bottom: 12px; z-index: 5; display: flex; gap: 4px; }
+.pv-zoom button { width: 34px; height: 34px; border-radius: 9px; border: 1px solid var(--border);
+  background: var(--glass); color: var(--fg); font-size: 16px; cursor: pointer; line-height: 1;
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+.pv-zoom button:hover { background: var(--surface-2); }
 .transport { display: flex; align-items: center; gap: 12px; padding: 8px 14px;
   background: var(--surface); border-top: 1px solid var(--border); }
 .transport .time { font-family: var(--font-mono); font-size: 13px; color: var(--muted); min-width: 132px; }
@@ -155,9 +227,15 @@
 .tbtn.play { width: 44px; height: 44px; background: var(--accent); border-color: var(--accent); color: #fff; }
 .transport .spacer { flex: 1; }
 
-/* ---- timeline ---- */
+/* ---- timeline (a bring-up pane) ---- */
 .timeline { grid-area: timeline; background: var(--surface); border-top: 1px solid var(--border);
-  display: flex; flex-direction: column; min-height: 0; }
+  display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.tl-grip { flex-shrink: 0; height: 30px; width: 100%; display: grid; place-items: center; cursor: pointer;
+  background: transparent; border: 0; border-bottom: 1px solid var(--border); }
+.tl-grip:hover { background: var(--surface-2); }
+.tl-grip-bar { width: 42px; height: 4px; border-radius: 999px; background: var(--border-2); display: block;
+  transition: background .12s; }
+.tl-grip:hover .tl-grip-bar { background: var(--accent); }
 .tl-toolbar { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-bottom: 1px solid var(--border); }
 .tl-toolbar .spacer { flex: 1; }
 .tl-zoom { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; }
@@ -207,19 +285,38 @@
 .nv-host { position: relative; flex: 1; min-height: 0; overflow: hidden; }
 .nv-pane { position: absolute; inset: 0; overflow-y: auto; padding-bottom: 40px;
   transition: transform .24s cubic-bezier(.25,1,.5,1), opacity .24s; }
-.nv-pane-in { max-width: 56rem; margin: 0 auto; padding: 0 18px; display: flex; flex-direction: column; gap: 12px; }
-.nv-surface { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
-.nv-surface-h { padding: 12px 18px; border-bottom: 1px solid var(--border); font-size: 13px; font-weight: 600; color: var(--muted); }
+/* Fluent / Win11-Settings shape: spacious rounded cards, soft plain-text section labels,
+   icon tiles per row. High signal, low noise. */
+.nv-pane-in { max-width: 46rem; margin: 0 auto; padding: 0 18px; display: flex; flex-direction: column; gap: 20px; }
+/* section label sits ABOVE its card (Win11), plain text; the card frame is on the body */
+.nv-surface { background: transparent; border: 0; }
+.nv-surface-h { padding: 2px 4px 8px; font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: .01em; }
+.nv-surface-b { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
 .nv-surface-b > .nv-item:not(:last-child) { border-bottom: 1px solid color-mix(in srgb, var(--fg) 6%, transparent); }
 .nv-row { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 12px;
-  padding: 15px 18px; background: transparent; border: 0; color: var(--fg); cursor: pointer; text-align: left; font: inherit; }
-.nv-row:hover { background: color-mix(in srgb, var(--fg) 7%, transparent); }
-.nv-left { display: flex; align-items: center; gap: 15px; min-width: 0; }
-.nv-ic { font-size: 22px; width: 26px; text-align: center; flex-shrink: 0; }
+  padding: 14px 16px; background: transparent; border: 0; color: var(--fg); cursor: pointer; text-align: left; font: inherit;
+  transition: background .12s; }
+.nv-row:hover { background: color-mix(in srgb, var(--fg) 6%, transparent); }
+.nv-left { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.nv-ic { width: 40px; height: 40px; flex-shrink: 0; display: grid; place-items: center; font-size: 20px;
+  border-radius: 10px; background: color-mix(in srgb, var(--fg) 7%, transparent); }
+.nv-ic.tinted { background: color-mix(in srgb, var(--tint) 20%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--tint) 35%, transparent); }
 .nv-meta { display: flex; flex-direction: column; min-width: 0; }
+.nv-line { display: flex; align-items: center; gap: 8px; }
 .nv-label { font-weight: 600; font-size: 15px; }
+.nv-badge { font-size: 9px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase;
+  color: var(--warning); border: 1px solid color-mix(in srgb, var(--warning) 45%, transparent);
+  border-radius: 999px; padding: 1px 6px; }
 .nv-cap { font-size: 13px; color: var(--muted); margin-top: 2px; }
-.nv-chev { color: var(--muted); font-size: 20px; flex-shrink: 0; }
+.nv-chev { color: var(--faint); font-size: 20px; flex-shrink: 0; }
+/* home wordmark tagline */
+.nv-tag { margin: 3px 0 0; font-size: 13px; color: var(--muted); }
+.nv-tag .no { color: var(--accent); font-weight: 600; }
+/* a whisper of mica so Home isn't flat near-black (the 'edgy' complaint) */
+#surface-home { background:
+  radial-gradient(120% 80% at 50% -10%, color-mix(in srgb, var(--accent) 9%, transparent), transparent 60%),
+  var(--bg); }
 .nv-ctrl { padding: 18px; display: flex; flex-direction: column; gap: 8px; background: var(--surface);
   border: 1px solid var(--border); border-radius: var(--radius); }
 .nv-ctrl-h { display: flex; align-items: center; justify-content: space-between; font-size: 14px; font-weight: 500; }
@@ -261,6 +358,11 @@
 :root[data-vp="phone"] .app-tab { padding: 7px 9px; }
 :root[data-vp="phone"] .app-tab .nm { display: none; }     /* icon-only rail */
 :root[data-vp="phone"] .shell-menu { display: none; }      /* guest menus live in-frame on phone */
+
+/* deck on phone: keep project name + projection switch + actions on one line (let name shrink) */
+:root[data-vp="phone"] .ed-deck { gap: 4px; padding: 0 6px; }
+:root[data-vp="phone"] .proj-name { min-width: 0; flex: 0 1 78px; }
+:root[data-vp="phone"] .proj-switch button { padding: 4px 8px; font-size: 11px; }
 
 :root[data-vp="phone"] #surface-editor { overflow: hidden; }
 :root[data-vp="phone"] #app {
@@ -314,6 +416,25 @@
   border-radius: var(--radius-sm); padding: 8px 10px; font-size: 14px; font-family: var(--font-mono); }
 .cv-form input:focus { border-color: var(--accent); outline: none; }
 .cv-hint { font-size: 12px; color: var(--faint); }
+
+/* ---- context menu (long-press / right-click verb flyout — the homespun Menu) ---- */
+/* .ctx-menu carries the shared .acrylic class (added in contextmenu.js) — same frosted glass as the
+   dock + flickpaint. No solid background here, so the acrylic material shows through. */
+.ctx-menu { position: fixed; z-index: 400; min-width: 186px; max-width: 270px; padding: 5px;
+  border: 1px solid var(--border-2); border-radius: 10px;
+  box-shadow: 0 20px 50px -10px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.10);
+  animation: ctxIn .12s ease; }
+@keyframes ctxIn { from { opacity: 0; transform: scale(.97) translateY(-3px); } to { opacity: 1; transform: none; } }
+.ctx-item { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; padding: 9px 11px;
+  border: 0; border-radius: 7px; background: transparent; color: var(--fg); cursor: pointer; font: inherit; font-size: 13px; }
+.ctx-item:hover:not(.disabled) { background: color-mix(in srgb, var(--accent) 16%, transparent); }
+.ctx-item.danger { color: var(--error); }
+.ctx-item.danger:hover { background: color-mix(in srgb, var(--error) 16%, transparent); }
+.ctx-item.disabled { opacity: .4; cursor: default; }
+.ctx-ic { width: 18px; text-align: center; flex-shrink: 0; color: var(--muted); }
+.ctx-item.danger .ctx-ic { color: var(--error); }
+.ctx-lb { flex: 1; }
+.ctx-sep { height: 1px; margin: 4px 6px; background: var(--border); }
 
 /* ---- HUD / toast ---- */
 #hud { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 100;

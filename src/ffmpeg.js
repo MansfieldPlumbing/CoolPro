@@ -54,6 +54,23 @@ export async function extractWav(blob, { onStatus } = {}) {
   return new Blob([data.buffer], { type: 'audio/wav' });
 }
 
+// Trim an audio (or any) file to [startSec, endSec] → PCM WAV. The ringtone-maker / cut-audio
+// primitive; pcm is a guaranteed codec (no libmp3lame gamble), and convert.js re-encodes to MP3
+// via the same lamejs path extract-audio already uses.
+export async function trimAudioWav(blob, { startSec = 0, endSec, onStatus } = {}) {
+  const ff = await loadFFmpeg(onStatus);
+  const { fetchFile } = await import('../vendor/ffmpeg-util/index.js');
+  await ff.writeFile('in', await fetchFile(blob));
+  const dur = Math.max(0.05, (endSec ?? 0) - startSec);
+  onStatus?.('Trimming audio…');
+  await ff.exec(['-ss', String(startSec), '-i', 'in', '-t', String(dur),
+    '-vn', '-ac', '2', '-ar', '48000', '-c:a', 'pcm_s16le', 'out.wav']);
+  const data = await ff.readFile('out.wav');
+  try { await ff.deleteFile('in'); await ff.deleteFile('out.wav'); } catch (_) {}
+  if (!data || !data.length) throw new Error('No audio track found');
+  return new Blob([data.buffer], { type: 'audio/wav' });
+}
+
 const H264 = ['-c:v', 'libx264', '-preset', 'veryfast', '-pix_fmt', 'yuv420p', '-crf', '23'];
 
 // Trim a video to [startSec, endSec] — accurate re-encode from the seek point.

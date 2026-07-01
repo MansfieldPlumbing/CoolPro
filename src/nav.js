@@ -44,10 +44,12 @@ export function mountNav(host, crumbsHost, rootView) {
       }
       case 'action': {
         const a = el('button', 'nv-row');
-        a.innerHTML = `<span class="nv-left"><span class="nv-ic">${node.icon || '›'}</span>
-          <span class="nv-meta"><span class="nv-label"></span>${node.caption ? '<span class="nv-cap"></span>' : ''}</span></span>
+        const tint = node.tint ? ` style="--tint: var(${node.tint})"` : '';
+        a.innerHTML = `<span class="nv-left"><span class="nv-ic${node.tint ? ' tinted' : ''}"${tint}>${node.icon || '›'}</span>
+          <span class="nv-meta"><span class="nv-line"><span class="nv-label"></span>${node.badge ? '<span class="nv-badge"></span>' : ''}</span>${node.caption ? '<span class="nv-cap"></span>' : ''}</span></span>
           <span class="nv-chev">${node.to ? '›' : ''}</span>`;
         a.querySelector('.nv-label').textContent = node.label || '';
+        if (node.badge) a.querySelector('.nv-badge').textContent = node.badge;
         if (node.caption) a.querySelector('.nv-cap').textContent = node.caption;
         a.addEventListener('click', () => { if (node.to) drill(typeof node.to === 'function' ? node.to() : node.to); else if (node.open) node.open(); else if (node.run) node.run(); });
         return a;

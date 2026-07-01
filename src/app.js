@@ -8,6 +8,7 @@ import { initPreview, play, pause, toggle, seek, toStart, toEnd, drawAt } from '
 import { subscribe as onViewport } from './viewport.js';
 import { initPanels, openExport } from './panels.js';
 import { initAddons } from './addons.js';
+import { attachContextMenu, openMenu } from './contextmenu.js';
 import { initPWA } from './pwa.js';
 import * as CDN from './cdn.js';
 import { toast } from './hud.js';
@@ -19,11 +20,12 @@ function boot() {
   initAddons();
   wireMediaBin();
   wireTopbar();
-  wireEditorMenu();
+  wireDeckMenu();
+  wireProjections();
   wireTransport();
   wireKeyboard();
   // PWA install/update + CDN package cache
-  initPWA(({ canInstall }) => { if (canInstall !== undefined) $('#btnInstall').hidden = !canInstall; });
+  initPWA((s) => { if (s.canInstall !== undefined) { installAvail = s.canInstall; const b = $('#btnInstall'); if (b) b.hidden = !s.canInstall; } });
   CDN.init().catch(() => {});
   // restore any saved project
   S.load().then((ok) => { if (ok) { renderBin(); toast('Restored your last project'); } });
@@ -39,18 +41,44 @@ function boot() {
   renderBin(); renderTransport(); renderStatus();
 }
 
-// ---- hamburger menu (obp): toggle the sheet; proxy items click the real (possibly hidden) buttons --
-function wireEditorMenu() {
-  const veil = $('#editorMenu'), btn = $('#btnEditorMenu');
-  if (!veil || !btn) return;
-  btn.addEventListener('click', (e) => { e.stopPropagation(); veil.classList.toggle('open'); });
-  veil.addEventListener('click', (e) => { if (e.target === veil) veil.classList.remove('open'); });
-  $$('.menu-item[data-proxy]', veil).forEach((it) => it.addEventListener('click', () => {
-    veil.classList.remove('open');
-    const t = document.getElementById(it.dataset.proxy); if (t) t.click();
-  }));
-  // btnAddons/btnInstall keep their own handlers (wired in wireTopbar / addons.js); just close after.
-  $$('.menu-item:not([data-proxy])', veil).forEach((it) => it.addEventListener('click', () => veil.classList.remove('open')));
+// ---- deck overflow (⋯): the homespun context menu replaces the obp hamburger sheet. Items
+// proxy-click the real (hidden) buttons, so addons.js / pwa.js / the timeline toolbar keep their wiring.
+let installAvail = false;
+function wireDeckMenu() {
+  const more = $('#edMore');
+  if (!more) return;
+  const proxy = (id) => () => document.getElementById(id)?.click();
+  const items = () => {
+    const list = [
+      { label: 'Add video track', icon: '＋', run: proxy('btnAddVideoTrack') },
+      { label: 'Add audio track', icon: '＋', run: proxy('btnAddAudioTrack') },
+      '-',
+      { label: 'Add-ons & CDN cache', icon: '⚙', run: proxy('btnAddons') },
+    ];
+    if (installAvail) list.push({ label: 'Install app', icon: '⤓', run: proxy('btnInstall') });
+    return list;
+  };
+  more.addEventListener('click', () => { const r = more.getBoundingClientRect(); openMenu(r.right - 8, r.bottom + 4, items()); });
+}
+
+// ---- projections (Blackmagic Resolve pages): set #app[data-projection]; the timeline grip is the
+// quick bring-up / drop-down. The grid reflows; the canvas timeline + preview repaint to fit. ----
+const PROJECTIONS = ['edit', 'wide', 'preview'];
+function wireProjections() {
+  const app = $('#app'), sw = $('#edProj'), grip = $('#tlGrip');
+  if (!app) return;
+  let cur = localStorage.getItem('coolpro-projection');
+  if (!PROJECTIONS.includes(cur)) cur = 'edit';
+  const set = (p) => {
+    if (!PROJECTIONS.includes(p)) return;
+    cur = p; app.dataset.projection = p;
+    try { localStorage.setItem('coolpro-projection', p); } catch (_) {}
+    if (sw) $$('button', sw).forEach((b) => b.classList.toggle('on', b.dataset.proj === p));
+    requestAnimationFrame(() => { renderTimeline(); drawAt(S.state.transport.time); });
+  };
+  if (sw) $$('button', sw).forEach((b) => b.addEventListener('click', () => set(b.dataset.proj)));
+  if (grip) grip.addEventListener('click', () => set(cur === 'preview' ? 'edit' : 'preview'));
+  set(cur);
 }
 
 // ---- status bar: selection on the left, project facts on the right ----
@@ -88,7 +116,20 @@ function renderBin() {
       ${m.thumbUrl ? `<img src="${m.thumbUrl}" alt="">` : `<div style="display:grid;place-items:center;height:100%;color:var(--muted)">${m.kind}</div>`}
       <span class="k">${m.kind}</span><span class="lbl">${esc(m.name)}</span>
     </div>`).join('');
-  $$('.item', bin).forEach((it) => it.addEventListener('click', () => { S.addClipFromMedia(it.dataset.id); toast('Added to timeline'); }));
+  $$('.item', bin).forEach((it) => {
+    const id = it.dataset.id;
+    it.addEventListener('click', () => { S.addClipFromMedia(id); toast('Added to timeline'); });
+    attachContextMenu(it, () => binMenu(id));
+  });
+}
+function binMenu(id) {
+  const m = S.media.get(id); if (!m) return [];
+  return [
+    { label: 'Add to timeline', icon: '＋', run: () => { S.addClipFromMedia(id); toast('Added to timeline'); } },
+    { label: 'Convert…', icon: '⇄', disabled: !m.file, run: () => { if (m.file) import('./convert.js').then((c) => c.openConvert(m.file)); } },
+    '-',
+    { label: 'Remove from bin', icon: '🗑', danger: true, run: () => { S.removeMedia(id); toast('Removed from bin'); } },
+  ];
 }
 
 // ---- top bar ------------------------------------------------------------

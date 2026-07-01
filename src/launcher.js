@@ -11,27 +11,40 @@ export function initLauncher(host, crumbsHost, api) {
 
 function buildHome(api) {
   const vp = (label, w, h, icon) => ({ type: 'action', icon: icon || '🎬', label, caption: `${w}×${h}`, run: () => newVideoProject(label, w, h, api) });
+  const pick = (fn, arg) => () => import('./convert.js').then((m) => m[fn] && m[fn](arg));
 
-  const createView = { title: 'Create', children: [
-    { type: 'group', title: 'New video project', children: [
-      vp('Reel / Short', 1080, 1920, '📱'),
-      vp('Square', 1080, 1080, '⬛'),
-      vp('Widescreen', 1920, 1080, '🖥️'),
-      vp('Cinematic', 1920, 816, '🎞️'),
+  // ---- Audio (Cool Edit Pro / Audition shaped — on device, no Adobe) ----
+  const audioView = { title: 'Audio', children: [
+    { type: 'group', title: 'Make', children: [
+      { type: 'action', icon: '🔔', label: 'Ringtone maker', caption: 'Trim any track down to a clip → MP3', run: pick('pickAndTrim', 'audio/*') },
+      { type: 'action', icon: '🎚️', label: 'Multitrack compose', caption: 'Layer & mix on the timeline — Audition-style', open: () => api.switchTo('editor') },
     ] },
-    { type: 'group', title: 'Other surfaces', children: [
-      { type: 'action', icon: '🖌️', label: 'New canvas', caption: 'Paint studio — layers, brushes, AI select', open: () => api.switchTo('paint') },
-      { type: 'action', icon: '🧊', label: 'New 3D scene', caption: 'Image → paintable standee', open: () => api.switchTo('model') },
+    { type: 'group', title: 'From a file', children: [
+      { type: 'action', icon: '✂️', label: 'Cut audio', caption: 'Top, tail, or shorten a clip', run: pick('pickAndTrim', 'audio/*') },
+      { type: 'action', icon: '🎵', label: 'Extract from video', caption: 'Pull the audio out of a video → MP3 / WAV', run: pick('pickAndConvert') },
+      { type: 'action', icon: '⇄', label: 'Convert format', caption: 'MP3 ⇄ WAV', run: pick('pickAndConvert') },
     ] },
   ] };
 
-  const toolsView = { title: 'Quick tools', children: [
-    { type: 'group', children: [
-      { type: 'action', icon: '⇄', label: 'Convert a file', caption: 'Extract audio · trim · outpaint · convert · remove background', run: () => run('pickAndConvert') },
-      { type: 'action', icon: '🧵', label: 'Stitch videos', caption: 'Join several clips end to end', run: () => run('pickAndStitch') },
+  // ---- Video ----
+  const videoView = { title: 'Video', children: [
+    { type: 'group', title: 'Make', children: [
+      { type: 'action', icon: '✦', label: 'New project', caption: 'Reel · Square · Widescreen · Cinematic', to: newVideoView(api, vp) },
+      { type: 'action', icon: '🎬', label: 'Multitrack editor', caption: 'CapCut-style timeline — Split · FX · Export', open: () => api.switchTo('editor') },
     ] },
-    { type: 'group', title: 'On a media clip in the editor', children: [
-      { type: 'action', icon: '🎬', label: 'Open the editor', caption: 'Then drop media — Split, FX, AI tools, Export', open: () => api.switchTo('editor') },
+    { type: 'group', title: 'From a file', children: [
+      { type: 'action', icon: '✂️', label: 'Trim video', caption: 'Cut the in & out points', run: pick('pickAndTrim', 'video/*') },
+      { type: 'action', icon: '🧵', label: 'Stitch videos', caption: 'Join several clips end to end', run: pick('pickAndStitch', 'video/*') },
+      { type: 'action', icon: '🖼️', label: 'Outpaint', caption: 'Extend the frame — rough, not CapCut-grade yet', badge: 'beta', run: pick('pickAndConvert') },
+    ] },
+  ] };
+
+  // ---- Image ----
+  const imageView = { title: 'Image', children: [
+    { type: 'group', children: [
+      { type: 'action', icon: '🖌️', label: 'Paint studio', caption: 'Layers · brushes · AI select & erase', open: () => api.switchTo('paint') },
+      { type: 'action', icon: '🧼', label: 'Remove background', caption: 'One-tap AI cutout → PNG', run: pick('pickAndConvert') },
+      { type: 'action', icon: '⬜', label: 'New canvas', caption: 'A blank artboard to paint on', open: () => api.switchTo('paint') },
     ] },
   ] };
 
@@ -48,23 +61,32 @@ function buildHome(api) {
       note: 'Merged from nocap · art4quinn · arlinearcade, on the subsystem doctrine. MIT.' },
   ] };
 
+  // Home: by medium, not by verb — one high-signal row per category, each a Fluent icon tile.
   return { title: 'Home', children: [
-    { type: 'group', title: 'Create', children: [
-      { type: 'action', icon: '✦', label: 'New project / template', caption: 'Reels, square, widescreen, canvas, 3D', to: createView },
+    { type: 'group', title: 'Studio', children: [
+      { type: 'action', tint: '--success', icon: '🎧', label: 'Audio', caption: 'Ringtone maker · cut · extract · multitrack', to: audioView },
+      { type: 'action', tint: '--accent',  icon: '🎬', label: 'Video', caption: 'Trim · stitch · outpaint · multitrack editor', to: videoView },
+      { type: 'action', tint: '--accent-2', icon: '🖼️', label: 'Image', caption: 'Paint · select · remove background', to: imageView },
+      { type: 'action', tint: '--neon',    icon: '🧊', label: '3D', caption: 'Image → silhouette → paintable standee', open: () => api.switchTo('model') },
     ] },
-    { type: 'group', title: 'Edit', children: [
-      { type: 'action', icon: '🎬', label: 'Video editor', caption: 'CapCut-style multitrack A/V', open: () => api.switchTo('editor') },
-      { type: 'action', icon: '🖌️', label: 'Paint studio', caption: 'Paint-Shop-Pro raster + AI', open: () => api.switchTo('paint') },
-      { type: 'action', icon: '🧊', label: '3D maker', caption: 'Image → silhouette → paint', open: () => api.switchTo('model') },
-    ] },
-    { type: 'group', title: 'Do', children: [
-      { type: 'action', icon: '🛠️', label: 'Quick tools', caption: 'Convert · Stitch · Extract · Outpaint · Remove BG', to: toolsView },
-      { type: 'action', icon: '⚙️', label: 'Settings', caption: 'Appearance · storage · about', to: settingsView },
+    { type: 'group', title: 'Handy', children: [
+      { type: 'action', tint: '--warning', icon: '⇄', label: 'Convert', caption: 'Any file → the format you need, on device', run: () => import('./convert.js').then((m) => m.pickAndConvert()) },
+      { type: 'action', tint: '--faint',   icon: '⚙️', label: 'Settings', caption: 'Appearance · storage · about', to: settingsView },
     ] },
   ] };
 }
 
-const run = (fn) => import('./convert.js').then((m) => m[fn] && m[fn]());
+// The sized-video-project picker (its own drill so Video → New project stays one tap deep).
+function newVideoView(api, vp) {
+  return { title: 'New project', children: [
+    { type: 'group', title: 'Choose a canvas', children: [
+      vp('Reel / Short', 1080, 1920, '📱'),
+      vp('Square', 1080, 1080, '⬛'),
+      vp('Widescreen', 1920, 1080, '🖥️'),
+      vp('Cinematic', 1920, 816, '🎞️'),
+    ] },
+  ] };
+}
 
 async function newVideoProject(label, w, h, api) {
   const S = await import('./store.js');

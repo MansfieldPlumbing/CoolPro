@@ -341,6 +341,7 @@ function loadImage(url) {
 
 async function loadCharacter(ch) {
   lastCh = ch;
+  const _h = document.getElementById('open-hero'); if (_h) _h.style.display = 'none';
   setStatus(`loading ${ch.name}…`);
   try {
     const frontImg = await loadImage(ch.front);
@@ -483,6 +484,17 @@ async function buildTray() {
     loadCharacter({ name: f.name.replace(/\.\w+$/, ''), front: url });
   });
   tray.append(opener, fileIn);
+
+  // CoolPro: a prominent centered opener on the empty stage, so "open an image" is unmissable.
+  if (!document.getElementById('open-hero')) {
+    const hero = document.createElement('button'); hero.id = 'open-hero';
+    hero.textContent = '📂 Open an image to start';
+    hero.style.cssText = 'position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:30;' +
+      'padding:14px 22px;border-radius:999px;border:0;background:var(--accent,#5b8cff);color:#fff;' +
+      'font-size:16px;font-weight:600;cursor:pointer;box-shadow:0 10px 30px rgba(0,0,0,.45)';
+    hero.addEventListener('click', () => fileIn.click());
+    (document.getElementById('viewport') || document.body).appendChild(hero);
+  }
 
   for (const ch of data.characters) {
     const b = document.createElement('button'); b.className = 'char'; b.title = ch.name;

@@ -33,19 +33,14 @@
        Chrome that projects the namespace. Holds no document truth: it mounts the active
        presenter into the stage and presents its verbs. (subsystem Shell.js, ported.) -->
   <div id="shell">
-    <header class="shell-bar">
-      <button id="brandHome" class="brand" title="Home"><b>Cool<span class="no">Pro</span></b><small>FOSS studio</small></button>
-      <nav id="appRail" class="app-rail" aria-label="Apps"></nav>
-      <div class="spacer"></div>
-      <div id="shellMenu" class="shell-menu"></div>
-      <button id="vpToggle" class="btn ghost vp-toggle" title="Switch view">🖥</button>
-    </header>
-
+    <!-- The app switcher used to live in a top shell-bar; the taskbar (below) is now the single nav.
+         No top chrome — the stage is full-bleed, the dock owns switching + view toggle. -->
     <div id="stage" class="stage-host">
       <!-- ── launcher: the front door (phone-first — arrive at a chooser, not a surface) ── -->
       <section id="surface-home" class="surface">
         <div class="nv-root">
-          <div class="nv-head"><h1>Cool<span class="no">Pro</span></h1></div>
+          <div class="nv-head"><h1>Cool<span class="no">Pro</span></h1>
+            <p class="nv-tag">Cut your own — <span class="no">no cap</span>. FOSS studio: audio · video · image · 3D.</p></div>
           <div id="navCrumbs" class="nv-crumbs"></div>
           <div id="navHost" class="nv-host"></div>
         </div>
@@ -54,30 +49,29 @@
       <!-- ── native surface: the CapCut-style A/V editor ── -->
       <section id="surface-editor" class="surface" hidden>
         <div id="app">
-          <!-- obp command ribbon: an icon cluster + a hamburger holding the full menu tree -->
-          <header class="topbar obp-bar">
-            <button id="btnEditorMenu" class="ribbon-btn icon" title="Menu" aria-haspopup="true"><span class="nf">&#xf0c9;</span></button>
-            <span class="ribbon-div"></span>
+          <!-- editor command deck (flickpaint-shaped): a slim acrylic strip — same frosted glass as
+               the dock + paint panes. Project name + the two primary verbs (Save · Export), with a ⋯
+               overflow that opens the homespun context menu for the rest (Add tracks · Add-ons ·
+               Install). Retires the obp ribbon + hamburger sheet — the chrome that read as disjointed. -->
+          <header class="ed-deck acrylic">
             <input id="projName" class="proj-name" value="Untitled project" spellcheck="false" />
+            <div class="spacer"></div>
+            <!-- projections (Blackmagic Resolve pages): one project, several rooms. Each rearranges the
+                 same panes — Edit (timeline up) · Wide (no side panels) · Preview (timeline down to a
+                 grip, the preview takes the whole pasteboard). -->
+            <div id="edProj" class="proj-switch" role="tablist" aria-label="Projection">
+              <button data-proj="edit" class="on">Edit</button>
+              <button data-proj="wide">Wide</button>
+              <button data-proj="preview">Preview</button>
+            </div>
             <div class="spacer"></div>
             <button id="btnSave" class="ribbon-btn icon" title="Save project to browser storage"><span class="nf">&#xf0c7;</span></button>
             <button id="btnExport" class="ribbon-btn primary" title="Export"><span class="nf">&#xf019;</span><span class="lbl">Export</span></button>
+            <button id="edMore" class="ribbon-btn icon" title="More" aria-haspopup="true"><span class="nf">&#xf142;</span></button>
+            <!-- kept (hidden) so addons.js / pwa.js keep their wiring; the ⋯ menu proxy-clicks them -->
+            <button id="btnAddons" hidden></button>
+            <button id="btnInstall" hidden></button>
           </header>
-
-          <!-- hamburger sheet — the full File/Tracks/App tree (obp pattern), one tap from the ribbon -->
-          <div id="editorMenu" class="menu-veil">
-            <div class="menu-sheet" role="menu">
-              <div class="menu-group">File</div>
-              <button class="menu-item" data-proxy="btnSave"><span class="nf">&#xf0c7;</span> Save project</button>
-              <button class="menu-item" data-proxy="btnExport"><span class="nf">&#xf019;</span> Export…</button>
-              <div class="menu-group">Tracks</div>
-              <button class="menu-item" data-proxy="btnAddVideoTrack"><span class="mi-plus">＋</span> Add video track</button>
-              <button class="menu-item" data-proxy="btnAddAudioTrack"><span class="mi-plus">＋</span> Add audio track</button>
-              <div class="menu-group">App</div>
-              <button class="menu-item" id="btnAddons"><span class="nf">&#xf013;</span> Add-ons &amp; CDN cache</button>
-              <button class="menu-item" id="btnInstall" hidden><span class="nf">&#xf019;</span> Install app</button>
-            </div>
-          </div>
 
           <!-- left: media bin -->
           <aside class="side left">
@@ -90,9 +84,17 @@
             <input id="filePicker" type="file" accept="video/*,audio/*,image/*" multiple hidden />
           </aside>
 
-          <!-- center: preview -->
+          <!-- center: preview — reuses flickpaint's pasteboard (infinite checker + framed artboard).
+               The canvas is the artboard; #previewStage is the pan/zoom transform host. -->
           <main class="stage">
-            <div class="viewport"><canvas id="preview" width="1280" height="720"></canvas></div>
+            <div class="viewport pasteboard">
+              <div id="previewStage" class="preview-stage"><canvas id="preview" width="1280" height="720"></canvas></div>
+              <div class="pv-zoom">
+                <button id="pvZoomOut" title="Zoom out">－</button>
+                <button id="pvZoomFit" title="Fit to view">⊡</button>
+                <button id="pvZoomIn" title="Zoom in">＋</button>
+              </div>
+            </div>
             <div class="transport">
               <div class="time"><b id="tCur">0:00.00</b> / <span id="tDur">0:00.00</span></div>
               <button id="btnToStart" class="tbtn" title="To start">⏮</button>
@@ -120,8 +122,10 @@
             </div>
           </aside>
 
-          <!-- bottom: timeline -->
+          <!-- bottom: timeline — a bring-up pane. The grip is the always-visible handle (flickpaint
+               bottom-tab): tap it to drop the timeline to a strip (Preview) or bring it back (Edit). -->
           <section class="timeline">
+            <button class="tl-grip" id="tlGrip" title="Bring the timeline up / down" aria-label="Toggle timeline"><span class="tl-grip-bar"></span></button>
             <div class="tl-toolbar">
               <button id="btnAddVideoTrack" class="btn ghost" title="Add video track">＋ Video track</button>
               <button id="btnAddAudioTrack" class="btn ghost" title="Add audio track">＋ Audio track</button>
@@ -157,6 +161,11 @@
       <!-- ── guest surfaces: paint & 3D mount here as hosted iframes ── -->
       <div id="stage-guests" class="surface" hidden></div>
     </div>
+
+    <!-- ── taskbar: the multitasking dock (phone-first, thumb reach). Always visible; chips are the
+         studio's surfaces, a live dot marks the warm ones. Wears .acrylic — flickpaint's frosted
+         glass, one shared material, one cohesion knob. (subsystem Taskbar, ported.) ── -->
+    <nav id="taskbar" class="taskbar acrylic" aria-label="Open surfaces"></nav>
   </div>
 
   <div id="hud"></div>
@@ -167,7 +176,9 @@
     import { initViewport } from './src/viewport.js';
     import { initShell } from './src/shell.js';
     import { initShare } from './src/share.js';
-    function boot() { initThemeEngine(); initViewport(); initShell(); initShare(); }
+    import { initTaskbar } from './src/taskbar.js';
+    // taskbar before shell: the dock now hosts #vpToggle, which the shell's wireChrome binds.
+    function boot() { initThemeEngine(); initViewport(); initTaskbar(); initShell(); initShare(); }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
     else boot();
   </script>
