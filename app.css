@@ -259,7 +259,7 @@
 .trk-vol { width: 100%; height: 4px; accent-color: var(--accent); cursor: pointer; }
 .tl-scroll { position: relative; overflow: auto; flex: 1; min-width: 0; }
 .tl-canvas-wrap { position: relative; }
-#tl-canvas { display: block; }
+#tl-canvas { display: block; touch-action: none; }
 #tl-playhead { position: absolute; top: 0; width: 2px; background: var(--playhead); pointer-events: none;
   box-shadow: 0 0 6px var(--playhead); z-index: 5; }
 #tl-playhead::before { content: ""; position: absolute; top: 0; left: -5px; border-left: 6px solid transparent;
