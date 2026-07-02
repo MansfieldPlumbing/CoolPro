@@ -18,8 +18,8 @@ The "2D animation studio via MediaPipe" ask from this session, landed as 5 commi
    `src/cdn.js`, cached through `sw.js`'s `nocap-cdn` lane.
 3. `apps/animate/` — the fourth surface ("flickmotion"): open a drawing → auto-skeleton (pose AI
    or template) → drag-the-dots joint fix-up → preset motions or live camera/video mocap → record
-   → send to the editor timeline. Registered in `src/registry.js`, reachable from the taskbar,
-   the launcher's new Animate drill-down (`src/launcher.js`), and Convert's "🕺 Animate character"
+   → send to the editor timeline. Registered in `src/registry.js`, reachable from the top menu bar's
+   surface switcher, the launcher's Animate drill-down (`src/launcher.js`), and Convert's "🕺 Animate character"
    option (`src/convert.js`).
 4. **Cross-surface flow** (closes a README roadmap item): guests can now post
    `{ type: 'export-media', blob, name, meta }` and `src/presenter.js` lands it on the editor
@@ -41,10 +41,10 @@ the animation doctrine), `vendor/anim/README.md` (new), `vendor/ml/README.md` (p
   a locally-mirrored copy of the MediaPipe CDN assets (the sandbox can't reach
   storage.googleapis.com/jsdelivr for the real model, so `window.__DPX_POSE__` override points
   at `http://127.0.0.1:8081/mediapipe/...` — see `vendor/ml/pose.js`'s override hook). Covers:
-  taskbar/launcher wiring, Animate boot, drawing→cutout→rig, motion animates the mesh *and* the
+  menu bar/launcher wiring, Animate boot, drawing→cutout→rig, motion animates the mesh *and* the
   actual stage pixels (not just data), camera mocap starts (fake device), MediaRecorder capture,
   export→timeline landing with duration override, 3D standee build + animate (pixel diff), zero
-  JS errors on both a 1440×900 desktop viewport and a 390×844 phone viewport.
+  JS errors on a 1440×900 desktop viewport (mouse and coarse-pointer/touch variants).
 - The one **skip**: pose-AI auto-rig on a synthetic 5-stroke stick figure falls back to the
   template skeleton in headless SwiftShader (no real GPU) — expected; not a code defect. Worth
   re-checking on a real device/GPU.

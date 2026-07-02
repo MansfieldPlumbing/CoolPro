@@ -1,4 +1,4 @@
-// src/share.js — Android share-target + file-handler intake (the phone-first payoff).
+// src/share.js — share-target + file-handler intake (the "Open with → CoolPro" payoff).
 //
 // Installed on Android, CoolPro shows up in the system SHARE SHEET (manifest `share_target`)
 // and as an "Open with" handler (`file_handlers`). Both deliver media here; this drops it

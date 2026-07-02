@@ -36,8 +36,8 @@ export function resolve(id) {
   return _records.find((o) => o.id === key) || null;
 }
 
-// The landing presenter — the Shell's front door (the Launcher). Phone-first: you arrive at a
-// chooser, not dumped into a surface.
+// The landing presenter — the Shell's front door (the Launcher): you arrive at a chooser,
+// not dumped into a surface.
 export function landing() { return _records.find((o) => o.role === 'launcher') || _records[0] || null; }
 
 // The Shell's layout — which presenters to offer in the app rail, in order.

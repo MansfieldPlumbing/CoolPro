@@ -19,9 +19,13 @@
 // ---------------------------------------------------------------------------
 
 const CDN = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@4';
-// Quality first: full SAM ViT-B (fp16 ≈189MB on WebGPU) gives much cleaner masks than the
-// tiny SlimSAM-77. If it can't load (low memory / no fp16 support) we fall back to SlimSAM.
-const MODELS_GPU  = [['Xenova/sam-vit-base', 'fp16'], ['Xenova/slimsam-77-uniform', 'fp32']];
+// Quality first: full SAM ViT-B gives much cleaner masks than the tiny SlimSAM-77. On WebGPU we
+// split precision PER SUBMODULE: the heavy vision encoder runs fp16 (fast, the big win), but the
+// mask decoder MUST stay fp32 — its fp16 MatMul fails to compile a WebGPU compute pipeline on many
+// drivers ("[Invalid ShaderModule "MatMul"]"), the exact error that used to kill the wand. fp32 on
+// the tiny decoder is cheap and compiles everywhere. If ViT-B can't load we fall back to SlimSAM.
+const GPU_SPLIT   = { vision_encoder: 'fp16', prompt_encoder_mask_decoder: 'fp32' };
+const MODELS_GPU  = [['Xenova/sam-vit-base', GPU_SPLIT], ['Xenova/slimsam-77-uniform', GPU_SPLIT]];
 // No WebGPU → CPU: prefer the tiny fast SlimSAM (ViT-B on wasm would be painfully slow).
 const MODELS_WASM = [['Xenova/slimsam-77-uniform', 'q8'], ['Xenova/sam-vit-base', 'q8']];
 const MAX_IN = 1024;
@@ -33,7 +37,7 @@ let _cacheKey = null, _emb = null, _embW = 0, _embH = 0, _scale = 1;
 
 export function selectorBusy() { return _busy; }
 
-function isGpuError(e) { return /webgpu|gpu|ortrun|bind ?group|validation|createbindgroup|shader|device lost/i.test(String((e && e.message) || e)); }
+function isGpuError(e) { return /webgpu|gpu|ortrun|bind ?group|validation|createbindgroup|shader|shadermodule|compute pipeline|device lost|non-?zero status|matmul/i.test(String((e && e.message) || e)); }
 async function withWasmFallback(run, onStatus) {
   try { return await run(); }
   catch (e) {
@@ -104,22 +108,26 @@ function scaledCanvas(src, maxSide) {
 }
 
 // Encode the image once (cached by `key`). De-dupes concurrent calls so a pre-warm and
-// the actual snap share ONE encode instead of racing two.
+// the actual snap share ONE encode instead of racing two. The encode itself runs through the
+// WASM fallback: if the WebGPU vision encoder trips a driver bug, we flip to compatibility mode
+// and re-encode instead of leaving the wand broken.
 let _primeP = null, _primeKey = null;
+async function _encode(srcCanvas, key, onStatus) {
+  const { T, model, processor } = await ensure(onStatus);
+  const { canvas, scale } = scaledCanvas(srcCanvas, MAX_IN);
+  onStatus && onStatus('reading the picture…');
+  const blob = await new Promise((r) => canvas.toBlob(r, 'image/png'));
+  const image = await T.RawImage.read(blob);
+  const inputs = await processor(image);
+  const emb = await model.get_image_embeddings(inputs);
+  _cacheKey = key; _emb = { emb, vision: inputs }; _scale = scale; _embW = canvas.width; _embH = canvas.height;
+}
 export function primeSelector(srcCanvas, key, onStatus) {
   if (_cacheKey === key && _emb) return Promise.resolve();
   if (_primeP && _primeKey === key) return _primeP;
   _primeKey = key;
-  _primeP = (async () => {
-    const { T, model, processor } = await ensure(onStatus);
-    const { canvas, scale } = scaledCanvas(srcCanvas, MAX_IN);
-    onStatus && onStatus('reading the picture…');
-    const blob = await new Promise((r) => canvas.toBlob(r, 'image/png'));
-    const image = await T.RawImage.read(blob);
-    const inputs = await processor(image);
-    const emb = await model.get_image_embeddings(inputs);
-    _cacheKey = key; _emb = { emb, vision: inputs }; _scale = scale; _embW = canvas.width; _embH = canvas.height;
-  })().finally(() => { _primeP = null; });
+  _primeP = withWasmFallback(() => _encode(srcCanvas, key, onStatus), onStatus)
+    .finally(() => { _primeP = null; });
   return _primeP;
 }
 

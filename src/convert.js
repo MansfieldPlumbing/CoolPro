@@ -1,5 +1,5 @@
 // src/convert.js — the Convert sheet. Share (or open) a media file in, pick an output, get it
-// back out. This is the phone-first "share a video → receive an audio file" workflow: conversions
+// back out. This is the "share a video → receive an audio file" workflow: conversions
 // run on-device (ffmpeg.wasm for audio/video, RMBG for image cut-out) and the result goes to the
 // OS share sheet (→ Files, messaging, anywhere), a download, or onto the editor timeline.
 import { toast } from './hud.js';
