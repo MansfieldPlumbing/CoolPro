@@ -14,7 +14,9 @@
     :root:not([data-theme="dark"]) body { background: radial-gradient(120% 90% at 50% 0%, #eceef2 0%, #f1f3f6 55%, #f6f7fa 100%); }
   }
   :root[data-theme="light"] body { background: radial-gradient(120% 90% at 50% 0%, #eceef2 0%, #f1f3f6 55%, #f6f7fa 100%); }
-  #viewport { cursor: default; transition: filter .45s ease; position: relative; }
+  /* keep the shared chrome's absolute-inset #viewport (overriding position collapses it to 0-height);
+     it's a positioned ancestor already, so the #bones overlay anchors to it fine */
+  #viewport { cursor: default; transition: filter .45s ease; }
   body[data-view="left"]   #viewport,
   body[data-view="right"]  #viewport,
   body[data-view="bottom"] #viewport { filter: brightness(.7); }

@@ -236,6 +236,8 @@ function showBindPose() {
   attr.needsUpdate = true;
 }
 
+requestAnimationFrame(onResize);   // re-measure after first layout (fonts/CSS settle)
+
 const clock = new THREE.Clock();
 function tick() {
   requestAnimationFrame(tick);
@@ -251,11 +253,13 @@ tick();
 function setMotion(id) {
   const p = presetById(id);
   if (p) { motion = p; motionRef = TEMPLATE; }
+  if (editMode) setEditMode(false);              // playing a motion always leaves joint-editing
   document.querySelectorAll('#motions .gridbtn').forEach((b) => b.classList.toggle('active', b.dataset.m === id));
   playing = true; syncPlay();
 }
 function setClipMotion(clip) {
   motion = clip; motionRef = clip.frames[0];
+  if (editMode) setEditMode(false);
   document.querySelectorAll('#motions .gridbtn').forEach((b) => b.classList.remove('active'));
   playing = true; syncPlay();
 }
