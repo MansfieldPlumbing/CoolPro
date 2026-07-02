@@ -8,6 +8,10 @@
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+// the shared character rig engine (vendor/anim) — the standee can dance now
+import { TEMPLATE, retargetPose } from '../../vendor/anim/skeleton.js';
+import { presetById, samplePreset, rootFor } from '../../vendor/anim/motion.js';
+import { buildRig, bindPoints, deformPoints } from '../../vendor/anim/rig.js';
 
 // ---------------------------------------------------------------- tuning
 const TARGET_HEIGHT = 2.4;
@@ -323,11 +327,12 @@ class Skin {
 function rgba(hex, a) { const n = parseInt(hex.slice(1), 16); return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`; }
 
 // ---------------------------------------------------------------- character lifecycle
-let current = null;   // { mesh, front, back, size, s }
+let current = null;   // { mesh, front, back, size, s, mask }
 let baseY = 0, yNudge = 0, boundsOn = false, boundsHelper = null;
 
 function disposeCurrent() {
   if (!current) return;
+  stopAnim(false);
   scene.remove(current.mesh);
   current.mesh.geometry.dispose();
   for (const m of current.mesh.material) m.dispose();
@@ -367,9 +372,10 @@ async function loadCharacter(ch) {
 
     disposeCurrent();
     scene.add(mesh);
-    current = { mesh, front: frontSkin, back: backSkin, size, s };
+    current = { mesh, front: frontSkin, back: backSkin, size, s, mask };
 
     floorUniforms.uFootR.value = Math.max(0.4, size.x * s * 0.6);
+    setAnim('none');                                // fresh geometry — rig rebuilds on demand
     if (boundsOn) rebuildBounds();
     frameModel(size.y * s);
     updateMeasure();
@@ -405,6 +411,56 @@ function applyY() { if (!current) return; current.mesh.position.y = baseY + yNud
 function rebuildBounds() {
   if (boundsHelper) { scene.remove(boundsHelper); boundsHelper.geometry.dispose(); boundsHelper = null; }
   if (boundsOn && current) { boundsHelper = new THREE.Box3Helper(new THREE.Box3().setFromObject(current.mesh), 0xff3b5c); scene.add(boundsHelper); }
+}
+
+// ---------------------------------------------------------------- animate (vendor/anim rig on the standee)
+// The extruded grid's vertices live in rig space already (x = gx/gw·aspect, y = 1 − gy/gh), so
+// the shared 2D rig deforms the 3D geometry directly: build the rig from the same silhouette,
+// bind every vertex once, then per frame write deformed x/y back — z (the extrusion) never moves.
+let anim = null;      // { rig, binding, bind3, out, motion, t }
+let animSpeed = 1;
+
+function stopAnim(restore = true) {
+  if (!anim) return;
+  if (restore && current) {
+    const attr = current.mesh.geometry.attributes.position;
+    attr.array.set(anim.bind3); attr.needsUpdate = true;
+    current.mesh.geometry.computeBoundingSphere();
+  }
+  anim = null;
+}
+
+function setAnim(id) {
+  document.querySelectorAll('[data-anim]').forEach((b) => b.classList.toggle('active', b.dataset.anim === id));
+  if (id === 'none') { stopAnim(); return; }
+  if (!current) { setStatus('open an image first — then it can dance'); return; }
+  const motion = presetById(id);
+  if (!motion) return;
+  if (!anim) {
+    try {
+      const rig = buildRig(current.mask.base, { longSide: 64 });
+      const attr = current.mesh.geometry.attributes.position;
+      const n = attr.count;
+      const pts = new Float32Array(n * 2);
+      for (let i = 0; i < n; i++) { pts[i * 2] = attr.array[i * 3]; pts[i * 2 + 1] = 1 - attr.array[i * 3 + 1]; }
+      anim = { rig, binding: bindPoints(rig, pts), bind3: attr.array.slice(), out: new Float32Array(n * 2), motion, t: 0 };
+    } catch (e) { console.error(e); setStatus('could not rig that one: ' + e.message); return; }
+  }
+  anim.motion = motion;
+  setStatus(`${motion.label} — painting still works while it moves`);
+}
+
+function stepAnim(dt) {
+  if (!anim || !current) return;
+  anim.t += dt * animSpeed;
+  const src = samplePreset(anim.motion, anim.t);
+  const posed = retargetPose(src, anim.rig.bind, rootFor(src, TEMPLATE, anim.rig.bind));
+  deformPoints(anim.rig, posed, anim.binding, anim.out);
+  const attr = current.mesh.geometry.attributes.position;
+  const n = attr.count;
+  for (let i = 0; i < n; i++) { attr.array[i * 3] = anim.out[i * 2]; attr.array[i * 3 + 1] = 1 - anim.out[i * 2 + 1]; }
+  attr.needsUpdate = true;
+  current.mesh.geometry.computeBoundingSphere();   // keep raycast-painting honest while it moves
 }
 
 // ---------------------------------------------------------------- painting (face-aware: front vs back skin)
@@ -534,6 +590,13 @@ $('ynudge').addEventListener('input', (e) => { yNudge = +e.target.value; applyY(
 $('snap').addEventListener('click', () => { yNudge = 0; $('ynudge').value = 0; applyY(); });
 $('showbox').addEventListener('click', () => { boundsOn = !boundsOn; $('showbox').classList.toggle('active', boundsOn); rebuildBounds(); });
 
+// animate: motion presets from the shared rig engine + a speed knob
+document.querySelectorAll('[data-anim]').forEach((b) => b.addEventListener('click', () => setAnim(b.dataset.anim)));
+$('animspeed').addEventListener('input', (e) => {
+  animSpeed = +e.target.value / 100;
+  $('animSpeedVal').textContent = e.target.value + '%';
+});
+
 // AI silhouette: cut the subject from any background, then re-extrude the current character
 $('aicut').addEventListener('click', () => {
   aiSilhouette = !aiSilhouette;
@@ -559,7 +622,14 @@ function onResize() {
 }
 addEventListener('resize', onResize);
 const clock = new THREE.Clock();
-function tick() { skyUniforms.uTime.value += clock.getDelta(); controls.update(); renderer.render(scene, camera); requestAnimationFrame(tick); }
+function tick() {
+  const dt = clock.getDelta();
+  skyUniforms.uTime.value += dt;
+  stepAnim(Math.min(0.1, dt));
+  controls.update();
+  renderer.render(scene, camera);
+  requestAnimationFrame(tick);
+}
 
 syncTool();
 buildTray();

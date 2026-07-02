@@ -30,6 +30,30 @@ async function importFile(file) {
   return { ...base, ...(await probeVideo(url)) };
 }
 
+// Land a GENERATED blob (a guest's rendered clip, an AI result) in the bin + timeline. The
+// generator knows its own duration/size — and MediaRecorder WebM ships broken duration
+// metadata (Infinity), so the supplied meta overrides whatever probing reports.
+export async function landGenerated({ blob, name = 'generated.webm', meta = {} }) {
+  const type = blob.type || (/\.mp4$/i.test(name) ? 'video/mp4' : 'video/webm');
+  const file = new File([blob], name, { type });
+  const kind = meta.kind || mediaKind(file);
+  const url = URL.createObjectURL(file);
+  let probed = {};
+  try {
+    probed = kind === 'image' ? await probeImage(url)
+           : kind === 'audio' ? await probeAudio(file, url)
+           : await probeVideo(url);
+  } catch (_) { /* generated media may resist probing — meta carries the truth */ }
+  const rec = { id: uid('med'), name, kind, url, file, ...probed };
+  if (Number.isFinite(meta.duration) && meta.duration > 0) rec.duration = meta.duration;
+  if (!Number.isFinite(rec.duration) || rec.duration <= 0) rec.duration = 5;
+  if (meta.width) rec.width = meta.width;
+  if (meta.height) rec.height = meta.height;
+  addMedia(rec);
+  addClipFromMedia(rec.id);
+  return rec;
+}
+
 function probeImage(url) {
   return new Promise((res, rej) => {
     const img = new Image();

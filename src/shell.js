@@ -110,6 +110,14 @@ export async function switchTo(id) {
   notify();
 }
 
+// Hand a message to a surface, mounting it first (e.g. open-media with a File — structured
+// clone carries blobs fine). GuestPresenter queues it until the guest reports surface-ready.
+export async function sendToSurface(id, msg) {
+  await switchTo(id);
+  const p = mounted.get(id);
+  if (p && p.post) p.post(msg);
+}
+
 // Present a presenter's contributed verbs (grouped by menu), or clear when it has none.
 function renderMenu(p) {
   const slot = document.getElementById('shellMenu');

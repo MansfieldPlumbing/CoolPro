@@ -20,6 +20,9 @@ const PRESENTERS = [
   { id: 'model',  name: '3D',      type: 'model',  kind: 'guest', src: 'apps/three/index.html',
     icon: '🧊', blurb: 'Image → silhouette → paintable 3D standee. Model maker & massager.',
     path: '\\Shell\\Model' },
+  { id: 'animate', name: 'Animate', type: 'animate', kind: 'guest', src: 'apps/animate/index.html',
+    icon: '🕺', blurb: 'Draw a character, it gets a skeleton, make it dance — presets or camera mocap.',
+    path: '\\Shell\\Animate' },
 ];
 
 let _records = PRESENTERS.map((r) => ({ ...r }));

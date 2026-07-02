@@ -35,7 +35,7 @@ export class NativePresenter extends UiObject {
 }
 
 export class GuestPresenter extends UiObject {
-  constructor(rec) { super(rec); this.frame = null; this._onMsg = null; this._loaded = false; }
+  constructor(rec) { super(rec); this.frame = null; this._onMsg = null; this._loaded = false; this._ready = false; this._outbox = []; }
 
   async mount(host, ctx) {
     await super.mount(host, ctx);
@@ -50,11 +50,17 @@ export class GuestPresenter extends UiObject {
       f.src = this.ctx.registry.contentUrl(this.rec);
       this.frame = f;
       host.appendChild(f);
-      // Listen for the verbs this guest contributes (menu-context) — only from OUR frame.
+      // Listen to this guest — only OUR frame. Two inbound message kinds today:
+      //   menu-context   — the verbs it contributes (shared/presenter.js SDK)
+      //   surface-ready  — it booted; flush anything the Shell queued for it
+      //   export-media   — a rendered deliverable (blob) for the editor timeline
       this._onMsg = (e) => {
         if (e.source !== f.contentWindow) return;       // ignore other frames / the page
         const d = e.data;
-        if (d && d.type === 'menu-context') { this.verbs = d.items || []; this.ctx.shell.onVerbs(this); }
+        if (!d) return;
+        if (d.type === 'menu-context') { this.verbs = d.items || []; this.ctx.shell.onVerbs(this); }
+        else if (d.type === 'surface-ready') { this._ready = true; this._flush(); }
+        else if (d.type === 'export-media' && d.blob) landExport(d);
       };
       window.addEventListener('message', this._onMsg);
     }
@@ -69,12 +75,32 @@ export class GuestPresenter extends UiObject {
     try { this.frame?.contentWindow?.postMessage({ type: 'app-menu-action', verb }, '*'); } catch (_) {}
   }
 
+  // Hand the guest a message (e.g. open-media with a File). Queued until the guest says ready —
+  // a freshly mounted iframe hasn't booted its module yet.
+  post(msg) {
+    if (this._ready) { try { this.frame?.contentWindow?.postMessage(msg, '*'); } catch (_) {} }
+    else this._outbox.push(msg);
+  }
+  _flush() { const q = this._outbox; this._outbox = []; for (const m of q) this.post(m); }
+
   unmount() {
     if (this._onMsg) window.removeEventListener('message', this._onMsg);
     if (this.frame) this.frame.remove();
-    this.frame = null; this._loaded = false; this._onMsg = null;
+    this.frame = null; this._loaded = false; this._onMsg = null; this._ready = false; this._outbox = [];
     super.unmount();
   }
+}
+
+// A guest handed back a rendered deliverable — land it in the editor's media bin + timeline.
+// (The cross-surface flow: Animate's clips, and tomorrow Paint cut-outs / 3D turntables.)
+async function landExport(d) {
+  try {
+    const [{ landGenerated }, { toast }] = await Promise.all([import('./media.js'), import('./hud.js')]);
+    await landGenerated({ blob: d.blob, name: d.name, meta: d.meta });
+    const { switchTo } = await import('./shell.js');
+    switchTo('editor');
+    toast(`${d.name || 'clip'} → added to the timeline`);
+  } catch (e) { console.error('export-media landing failed', e); }
 }
 
 // Factory: build the right presenter for a registry record. Native presenters bind to a surface

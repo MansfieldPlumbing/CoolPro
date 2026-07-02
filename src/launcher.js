@@ -48,6 +48,25 @@ function buildHome(api) {
     ] },
   ] };
 
+  // ---- Animate (draw a character → skeleton → make it move) ----
+  const toAnimate = (file) => import('./shell.js').then((m) => m.sendToSurface('animate', { type: 'open-media', file }));
+  const pickToAnimate = () => {
+    const inp = document.createElement('input');
+    inp.type = 'file'; inp.accept = 'image/*';
+    inp.addEventListener('change', () => { if (inp.files && inp.files[0]) toAnimate(inp.files[0]); });
+    inp.click();
+  };
+  const animView = { title: 'Animate', children: [
+    { type: 'group', title: 'Make it move', children: [
+      { type: 'action', icon: '🕺', label: 'Animate a drawing', caption: 'Auto-skeleton → wave · walk · dance · jumping jacks', run: pickToAnimate },
+      { type: 'action', icon: '📷', label: 'Mocap studio', caption: 'Act it out on camera — your character follows live', open: () => api.switchTo('animate') },
+      { type: 'action', icon: '🎞️', label: 'Motion from a video', caption: 'Any clip of a person becomes a reusable move', open: () => api.switchTo('animate') },
+    ] },
+    { type: 'group', title: 'Then', children: [
+      { type: 'action', icon: '➕', label: 'Send clips to the editor', caption: 'Rendered animations land straight on the timeline', open: () => api.switchTo('animate') },
+    ] },
+  ] };
+
   const settingsView = { title: 'Settings', children: [
     { type: 'group', title: 'Appearance', children: [
       { type: 'segment', label: 'Theme', caption: 'Reskins every open surface instantly', value: Theme.getMode(),
@@ -68,6 +87,7 @@ function buildHome(api) {
       { type: 'action', tint: '--accent',  icon: '🎬', label: 'Video', caption: 'Trim · stitch · outpaint · multitrack editor', to: videoView },
       { type: 'action', tint: '--accent-2', icon: '🖼️', label: 'Image', caption: 'Paint · select · remove background', to: imageView },
       { type: 'action', tint: '--neon',    icon: '🧊', label: '3D', caption: 'Image → silhouette → paintable standee', open: () => api.switchTo('model') },
+      { type: 'action', tint: '--warning', icon: '🕺', label: 'Animate', caption: 'Skeleton a drawing · mocap with the camera', to: animView },
     ] },
     { type: 'group', title: 'Handy', children: [
       { type: 'action', tint: '--warning', icon: '⇄', label: 'Convert', caption: 'Any file → the format you need, on device', run: () => import('./convert.js').then((m) => m.pickAndConvert()) },

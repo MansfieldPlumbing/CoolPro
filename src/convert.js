@@ -7,7 +7,7 @@ import { extractWav, transcodeToMp4, trimVideo, trimAudioWav, outpaintVideo, sti
 import { encodeMp3, shareOrDownload, download, safe } from './export.js';
 import { ctx as audioCtx } from './audio.js';
 import { importFiles } from './media.js';
-import { switchTo } from './shell.js';
+import { switchTo, sendToSurface } from './shell.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
 
@@ -31,6 +31,7 @@ function optionsFor(file) {
   ];
   if (kind === 'image') return [
     { label: '✂️ Remove background → PNG', run: (f, s) => removeBg(f, stem, s) },
+    { label: '🕺 Animate character', animate: true },
     { label: '🖼️ Convert → PNG', run: (f, s) => toImage(f, 'png', stem, s) },
     { label: '🖼️ Convert → JPG', run: (f, s) => toImage(f, 'jpg', stem, s) },
     { label: '➕ Add to timeline', timeline: true },
@@ -64,6 +65,7 @@ function renderOptions(back, file, close) {
   body.querySelectorAll('.cv-opt').forEach((b) => b.addEventListener('click', async () => {
     const opt = opts[+b.dataset.i];
     if (opt.timeline) { await importFiles([file]); switchTo('editor'); close(); toast('Added to the timeline'); return; }
+    if (opt.animate) { await sendToSurface('animate', { type: 'open-media', file }); close(); return; }
     if (opt.trim) { renderTrim(back, file, close); return; }
     await convertAndShow(back, file, opt, close);
   }));
