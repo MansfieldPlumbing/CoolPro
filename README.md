@@ -13,8 +13,8 @@ model, running entirely on-device (no accounts, no uploads, no backend).
 
 ## The four surfaces (one shell)
 
-The Shell mounts one *presenter* at a time; the acrylic taskbar switches. Everything shares
-the same media, the same ML runtime, and the same house style.
+The Shell mounts one *presenter* at a time; the acrylic **menu bar** at the top switches. Everything
+shares the same media, the same ML runtime, and the same house style.
 
 | surface | what it is | brings |
 | --- | --- | --- |
@@ -49,8 +49,8 @@ projection of it, nothing holds its own truth, behaviours are verbs on objects.*
   with a `Sys.vom` of its own, designed to bind a host-injected provider with zero UI change.)
 
 ```
-index.html ── Shell (taskbar dock)
-   ├─ src/shell.js · registry.js · presenter.js   the chrome (projects the namespace)
+index.html ── Shell (top menu bar — File · Edit · View · Help + surface switcher)
+   ├─ src/shell.js · menubar.js · registry.js · presenter.js   the chrome (projects the namespace)
    ├─ src/vom.js                                   the model (one refcounted namespace)
    ├─ src/dpx.js  → vendor/ml/{segment,select,inpaint,pose}.js   the runtime (RMBG · SlimSAM · LaMa · MediaPipe)
    ├─ vendor/anim/{skeleton,rig,motion}.js         the character rig engine (AnimatedDrawings method)
@@ -78,20 +78,22 @@ No special headers needed: MP4 export uses the **single-threaded** ffmpeg.wasm c
 without cross-origin isolation (COOP/COEP) — on plain static hosting and on GitHub Pages.
 Installing the PWA and full offline both require **HTTPS** (or `localhost`).
 
-## Phone-first
+## Desktop-first, touch-aware
 
-CoolPro is built to be used from a phone. One form-factor signal (`src/viewport.js` →
-`:root[data-vp]`, `phone` | `desktop`) drives the whole studio: phone is a single scrollable
-column, desktop is the landscape grid. It banks off the browser's "Desktop site" toggle for
-free (that widens the viewport, flipping the signal), plus an in-app 🖥/📱 override. The front
-door is a **Launcher**, not a surface. Installed on Android, CoolPro registers a **share target**
-and **file handlers** — share a clip from Gallery (or "Open with → CoolPro") and it lands on the
-editor timeline (`manifest.webmanifest` + `sw.js` stash the share POST, `src/share.js` drains it).
+CoolPro is a **desktop suite**: one landscape workspace, a traditional top **menu bar** (File ·
+Edit · View · Help) with the surface switcher on the right, and **expansive right-click** context
+menus on the stage, clips, tracks, media and chrome — the native-app feel. There is no phone mode
+and no mobile column. It stays **touch-aware for 2-in-1 / hybrid devices**: a coarse pointer is
+sniffed (`src/viewport.js` → `:root[data-touch]`) purely to enlarge hit targets, and every menu is
+reachable by long-press as well as right-click — the layout never changes. The front door is a
+**Launcher**, not a surface. Installed as a PWA, CoolPro registers a **share target** and **file
+handlers** — "Open with → CoolPro" (or a shared clip) lands on the editor timeline
+(`manifest.webmanifest` + `sw.js` stash the share POST, `src/share.js` drains it).
 
 ## Roadmap (the merge, continued)
 
 Landed: the spine (`vom`/`dpx`/`registry`/`shell`/`presenter`); the four surfaces, switchable;
-shared ML/UI deduplicated; real RMBG matte through `dpx`; phone/desktop awareness + Launcher;
+shared ML/UI deduplicated; real RMBG matte through `dpx`; desktop menu-bar shell (touch-aware) + Launcher;
 Android share-target + file-handlers; the **Animate** studio (`vendor/anim` rig engine +
 MediaPipe `pose` capability) with the same rig animating the 3D standee; **cross-surface flow**
 — guests post `export-media` blobs that land on the editor timeline (Animate's rendered clips

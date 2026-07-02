@@ -10,13 +10,14 @@
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%235b8cff'/%3E%3Ctext x='16' y='22' font-size='15' text-anchor='middle' fill='white' font-family='sans-serif' font-weight='700'%3EC%3C/text%3E%3C/svg%3E" />
   <link rel="stylesheet" href="theme.css" />
   <link rel="stylesheet" href="app.css" />
-  <!-- form-factor signal, set before first paint (no flash). Banks off "Desktop site": that
-       widens the layout viewport, so the width check below reports desktop. -->
+  <!-- Desktop suite: one landscape layout, always. Set before first paint (no flash). We only
+       sniff TOUCH capability (for 2-in-1 hit-target sizing) — there is no phone mode. -->
   <script>
-    try { var p = localStorage.getItem('coolpro-view');
-      document.documentElement.dataset.vp = (p === 'desktop' || p === 'phone') ? p
-        : ((window.innerWidth || 1024) >= 820 ? 'desktop' : 'phone');
-    } catch (e) { document.documentElement.dataset.vp = 'desktop'; }
+    (function () { var R = document.documentElement; R.dataset.vp = 'desktop';
+      try { R.dataset.touch = ((window.matchMedia && matchMedia('(pointer: coarse)').matches)
+        || 'ontouchstart' in window || (navigator.maxTouchPoints || 0) > 0) ? 'on' : 'off'; }
+      catch (e) { R.dataset.touch = 'off'; }
+    })();
     // theme, applied before paint (no flash): mirrors src/theme-engine.js
     try { var R = document.documentElement, m = localStorage.getItem('coolpro-mode') || 'dark';
       if (m === 'auto') m = (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
@@ -33,10 +34,14 @@
        Chrome that projects the namespace. Holds no document truth: it mounts the active
        presenter into the stage and presents its verbs. (subsystem Shell.js, ported.) -->
   <div id="shell">
-    <!-- The app switcher used to live in a top shell-bar; the taskbar (below) is now the single nav.
-         No top chrome — the stage is full-bleed, the dock owns switching + view toggle. -->
+    <!-- ═══════════════════ the menu bar: the studio's single top chrome ═══════════════════
+         A traditional desktop menu bar — File · Edit · View · Help — plus the surface switcher
+         (Editor · Paint · 3D · Animate, a live dot on the warm ones). Replaces the old bottom
+         taskbar dock. Wears .acrylic (flickpaint's frosted glass). Built by src/menubar.js. -->
+    <header id="menubar" class="menubar acrylic" aria-label="Menu bar"></header>
+
     <div id="stage" class="stage-host">
-      <!-- ── launcher: the front door (phone-first — arrive at a chooser, not a surface) ── -->
+      <!-- ── launcher: the front door — arrive at a chooser, not dropped into a surface ── -->
       <section id="surface-home" class="surface">
         <div class="nv-root">
           <div class="nv-head"><h1>Cool<span class="no">Pro</span></h1>
@@ -161,11 +166,6 @@
       <!-- ── guest surfaces: paint & 3D mount here as hosted iframes ── -->
       <div id="stage-guests" class="surface" hidden></div>
     </div>
-
-    <!-- ── taskbar: the multitasking dock (phone-first, thumb reach). Always visible; chips are the
-         studio's surfaces, a live dot marks the warm ones. Wears .acrylic — flickpaint's frosted
-         glass, one shared material, one cohesion knob. (subsystem Taskbar, ported.) ── -->
-    <nav id="taskbar" class="taskbar acrylic" aria-label="Open surfaces"></nav>
   </div>
 
   <div id="hud"></div>
@@ -176,9 +176,10 @@
     import { initViewport } from './src/viewport.js';
     import { initShell } from './src/shell.js';
     import { initShare } from './src/share.js';
-    import { initTaskbar } from './src/taskbar.js';
-    // taskbar before shell: the dock now hosts #vpToggle, which the shell's wireChrome binds.
-    function boot() { initThemeEngine(); initViewport(); initTaskbar(); initShell(); initShare(); }
+    import { initMenubar } from './src/menubar.js';
+    // menubar before shell: it subscribes to Shell state, then the Shell's first switchTo lights
+    // up the active surface in the switcher.
+    function boot() { initThemeEngine(); initViewport(); initMenubar(); initShell(); initShare(); }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
     else boot();
   </script>

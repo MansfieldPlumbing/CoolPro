@@ -1,31 +1,11 @@
 /* ============================================================================
    CoolPro — app layout (structure only; colors/tokens live in theme.css)
-   Shell: [ shell-bar ] / [ stage → active surface ]
+   Shell: [ menu bar ] / [ stage → active surface ]
    Editor surface grid: [ topbar ] / [ left | stage | right ] / [ timeline ]
    ============================================================================ */
 
-/* ---- the Shell: a column with a chrome bar over a full-bleed stage ---- */
+/* ---- the Shell: a column with the menu bar over a full-bleed stage ---- */
 #shell { display: flex; flex-direction: column; height: 100vh; width: 100vw; }
-.shell-bar { display: flex; align-items: center; gap: 14px; height: var(--r-shell);
-  padding: 0 12px; background: var(--glass); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-  border-bottom: 1px solid var(--border); flex-shrink: 0; position: relative; z-index: 40; }
-.shell-bar .spacer { flex: 1; }
-.app-rail { display: flex; gap: 4px; }
-.app-tab { display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px; cursor: pointer;
-  background: transparent; border: 1px solid transparent; border-radius: 999px; color: var(--muted);
-  font-size: 13px; transition: background .12s, color .12s, border-color .12s; }
-.app-tab:hover { background: var(--surface-2); color: var(--fg); }
-.app-tab.active { background: color-mix(in srgb, var(--accent) 16%, transparent);
-  border-color: color-mix(in srgb, var(--accent) 45%, transparent); color: var(--fg); }
-.app-tab .ic { font-size: 15px; line-height: 1; }
-.shell-menu { display: flex; gap: 10px; align-items: center; }
-.shell-menu-group { display: flex; gap: 4px; align-items: center; }
-.shell-menu-group .mg-label { font-size: 11px; text-transform: uppercase; letter-spacing: .06em;
-  color: var(--faint); margin-right: 2px; }
-.mg-verb { background: transparent; border: 1px solid transparent; color: var(--fg); cursor: pointer;
-  font-size: 12px; padding: 4px 8px; border-radius: var(--radius-sm); }
-.mg-verb:hover:not(:disabled) { background: var(--surface-2); }
-.mg-verb:disabled { opacity: .4; cursor: default; }
 
 /* ---- stage: surfaces fill it; only the active one shows ---- */
 .stage-host { position: relative; flex: 1; min-height: 0; }
@@ -34,35 +14,44 @@
 .guest-frame { width: 100%; height: 100%; border: 0; display: block; background: var(--bg); }
 .guest-frame[hidden] { display: none; }
 
-/* ---- taskbar: the multitasking dock (subsystem Taskbar, ported) ----
-   A persistent strip under the stage. Chips are surfaces; a live dot marks the warm ones. Wears the
-   shared .acrylic material (class on the element) so it's the same frosted glass as flickpaint. ---- */
-.taskbar { flex-shrink: 0; display: flex; align-items: center; gap: 8px; height: 56px; padding: 0 10px;
-  border-top: 1px solid var(--border); position: relative; z-index: 40;
-  box-shadow: 0 -10px 30px -12px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,0.10); }
-.tb-vp { width: 40px; height: 40px; flex-shrink: 0; display: grid; place-items: center; cursor: pointer;
-  background: transparent; border: 1px solid transparent; border-radius: 12px; color: var(--muted);
-  font-size: 17px; transition: background .12s, color .12s; }
-.tb-vp:hover { background: var(--surface-2); color: var(--fg); }
-.tb-launch { width: 40px; height: 40px; flex-shrink: 0; display: grid; place-items: center; cursor: pointer;
-  background: var(--surface-2); border: 1px solid var(--border); border-radius: 12px; color: var(--fg);
-  font-size: 17px; transition: background .12s, transform .1s; }
-.tb-launch:hover { background: color-mix(in srgb, var(--accent) 18%, var(--surface-2)); }
-.tb-launch:active { transform: scale(.93); }
-.tb-launch.swap .tb-launch-ic { animation: tbSwap .2s ease; }
-@keyframes tbSwap { from { transform: scale(.4) rotate(-30deg); opacity: 0; } to { transform: none; opacity: 1; } }
-.tb-strip { position: relative; flex: 1; height: 46px; min-width: 0; }
-.tb-chip { position: absolute; top: 0; left: 0; width: 46px; height: 46px; display: grid; place-items: center;
-  cursor: pointer; background: transparent; border: 1px solid transparent; border-radius: 12px; color: var(--fg);
-  touch-action: none; will-change: transform; transition: background .12s, border-color .12s; }
-.tb-chip:hover { background: var(--surface-2); }
-.tb-chip.active { background: color-mix(in srgb, var(--accent) 16%, transparent);
-  border-color: color-mix(in srgb, var(--accent) 50%, transparent); }
-.tb-ic { font-size: 22px; line-height: 1; pointer-events: none; }
-.tb-dot { position: absolute; bottom: 3px; left: 50%; transform: translateX(-50%); width: 5px; height: 5px;
-  border-radius: 50%; background: transparent; transition: background .15s; pointer-events: none; }
-.tb-chip.live .tb-dot { background: color-mix(in srgb, var(--accent) 70%, var(--fg)); }
-.tb-chip.active.live .tb-dot { background: var(--accent); }
+/* ---- menu bar: the studio's one top chrome (replaces the old bottom taskbar) ----
+   A traditional desktop menu bar — brand · File/Edit/View/Help pull-downs · a spacer · the surface
+   switcher on the right. Wears the shared .acrylic material (class in markup) so it's the same
+   frosted glass as flickpaint. Touch stays first-class: densified only for a fine pointer. ---- */
+.menubar { flex-shrink: 0; display: flex; align-items: center; gap: 4px; height: var(--r-menubar);
+  padding: 0 8px; border-bottom: 1px solid var(--border); position: relative; z-index: 60;
+  box-shadow: 0 10px 30px -14px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,0.08); }
+/* brand */
+.mb-brand { display: inline-flex; align-items: center; gap: 2px; height: 30px; padding: 0 10px 0 8px;
+  background: transparent; border: 1px solid transparent; border-radius: 8px; color: var(--fg);
+  font-weight: 700; letter-spacing: -.02em; font-size: 14px; cursor: pointer; }
+.mb-brand:hover { background: color-mix(in srgb, var(--fg) 8%, transparent); }
+.mb-brand .mb-logo { color: var(--accent); font-size: 12px; margin-right: 5px; }
+.mb-brand .no { color: var(--accent); }
+/* pull-down titles */
+.mb-menus { display: flex; align-items: center; gap: 1px; margin-left: 4px; }
+.mb-menu { height: 30px; padding: 0 11px; background: transparent; border: 1px solid transparent;
+  border-radius: 7px; color: var(--fg); font-size: 13px; cursor: pointer;
+  transition: background .1s, color .1s; }
+.mb-menu:hover { background: color-mix(in srgb, var(--fg) 8%, transparent); }
+.mb-menu.open { background: color-mix(in srgb, var(--accent) 20%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 40%, transparent); }
+.mb-spacer { flex: 1; min-width: 8px; }
+/* surface switcher (ex-taskbar chips), now on the right of the bar */
+.mb-switch { display: flex; align-items: center; gap: 3px; }
+.mb-chip { display: inline-flex; align-items: center; gap: 7px; height: 30px; padding: 0 11px 0 9px;
+  background: transparent; border: 1px solid transparent; border-radius: 8px; color: var(--muted);
+  font-size: 12.5px; cursor: pointer; position: relative; white-space: nowrap;
+  transition: background .12s, color .12s, border-color .12s; }
+.mb-chip:hover { background: var(--surface-2); color: var(--fg); }
+.mb-chip.active { background: color-mix(in srgb, var(--accent) 16%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent); color: var(--fg); }
+.mb-ic { font-size: 15px; line-height: 1; }
+.mb-nm { line-height: 1; }
+.mb-dot { width: 5px; height: 5px; border-radius: 50%; background: transparent; margin-left: 1px;
+  transition: background .15s; }
+.mb-chip.live .mb-dot { background: color-mix(in srgb, var(--accent) 70%, var(--fg)); }
+.mb-chip.active.live .mb-dot { background: var(--accent); }
 
 #app {
   display: grid; height: 100%; width: 100%;
@@ -74,24 +63,19 @@
     "timeline timeline timeline"
     "status status status";
 }
-/* phone/desktop layout is driven by :root[data-vp] (src/viewport.js), not a raw media query —
-   one form-factor signal, see the "phone" section at the bottom of this file. */
+/* Desktop suite: one landscape grid, always. Touch only densifies hit targets (pointer:coarse
+   rules at the foot of this file); it never changes the layout. */
 
 /* ---- projections (Blackmagic Resolve pages): one project, several rooms. Each value of
    data-projection rearranges the SAME panes — no DOM swap, just grid reflow. ---- */
 #app { transition: grid-template-rows .34s cubic-bezier(.2,.85,.25,1), grid-template-columns .34s cubic-bezier(.2,.85,.25,1); }
-/* both form factors: Wide & Preview drop the side panels (on phone their stacked rows then collapse). */
+/* Wide & Preview drop the side panels; then collapse the side columns. Preview also drops the
+   timeline row down to its grip so the preview owns the pasteboard. */
 #app[data-projection="wide"]    .side,
 #app[data-projection="preview"] .side { display: none; }
-/* desktop: collapse the side columns; Preview also drops the timeline row to its grip. */
-:root[data-vp="desktop"] #app[data-projection="wide"]    { grid-template-columns: 0 minmax(0,1fr) 0; }
-:root[data-vp="desktop"] #app[data-projection="preview"] { grid-template-columns: 0 minmax(0,1fr) 0;
+#app[data-projection="wide"]    { grid-template-columns: 0 minmax(0,1fr) 0; }
+#app[data-projection="preview"] { grid-template-columns: 0 minmax(0,1fr) 0;
   grid-template-rows: var(--r-bar) minmax(0,1fr) 30px var(--r-status); }
-/* phone (6-area scroll column): Preview drops the timeline row to its grip; hidden sides self-collapse.
-   The phone min-height on .timeline would otherwise defeat the collapse, so override it here. */
-:root[data-vp="phone"] #app[data-projection="preview"] {
-  grid-template-rows: var(--r-bar) 56vh 30px auto auto var(--r-status); }
-:root[data-vp="phone"] #app[data-projection="preview"] .timeline { min-height: 30px; }
 
 /* projection switcher (deck) — segmented pill */
 .proj-switch { display: inline-flex; gap: 2px; padding: 3px; border-radius: 999px;
@@ -347,40 +331,22 @@
 
 /* glass off (Settings → Appearance): solid surfaces, no blur */
 :root[data-mica="off"] { --glass: var(--surface); }
-:root[data-mica="off"] .shell-bar, :root[data-mica="off"] .topbar { backdrop-filter: none; -webkit-backdrop-filter: none; }
+:root[data-mica="off"] .topbar,
+:root[data-mica="off"] .menubar { backdrop-filter: none; -webkit-backdrop-filter: none; }
 
-/* ============================ phone: one scrollable column ============================
-   Driven by the form-factor signal (:root[data-vp="phone"]); nothing is hidden — the editor's
-   side panels stack below the stage & timeline instead of disappearing. */
-:root[data-vp="phone"] .shell-bar { gap: 8px; padding: 0 8px; }
-:root[data-vp="phone"] .brand small { display: none; }
-:root[data-vp="phone"] .app-rail { gap: 2px; }
-:root[data-vp="phone"] .app-tab { padding: 7px 9px; }
-:root[data-vp="phone"] .app-tab .nm { display: none; }     /* icon-only rail */
-:root[data-vp="phone"] .shell-menu { display: none; }      /* guest menus live in-frame on phone */
-
-/* deck on phone: keep project name + projection switch + actions on one line (let name shrink) */
-:root[data-vp="phone"] .ed-deck { gap: 4px; padding: 0 6px; }
-:root[data-vp="phone"] .proj-name { min-width: 0; flex: 0 1 78px; }
-:root[data-vp="phone"] .proj-switch button { padding: 4px 8px; font-size: 11px; }
-
-:root[data-vp="phone"] #surface-editor { overflow: hidden; }
-:root[data-vp="phone"] #app {
-  height: 100%; overflow-y: auto; -webkit-overflow-scrolling: touch;
-  grid-template-columns: 1fr;
-  grid-template-rows: var(--r-bar) 40vh minmax(180px, 32vh) auto auto var(--r-status);
-  grid-template-areas: "topbar" "stage" "timeline" "left" "right" "status";
+/* ============================ touch awareness (2-in-1 hybrids) ============================
+   The layout never changes — this only enlarges hit targets when the primary pointer is coarse
+   (a finger / stylus), so a Surface-style convertible is comfortable without a separate "phone"
+   mode. A mouse keeps the tighter desktop metrics. */
+@media (pointer: coarse) {
+  .mb-menu { padding: 0 14px; }
+  .mb-chip { height: 34px; padding: 0 13px 0 11px; }
+  .mb-brand { height: 34px; }
+  .menubar { height: 46px; }
+  .ctx-item { padding: 12px 12px; }         /* fatter right-click / pull-down rows for fingers */
+  .ribbon-btn { height: 40px; }
+  .ribbon-btn.icon { width: 40px; }
 }
-:root[data-vp="phone"] .menu-sheet { left: 8px; right: 8px; min-width: 0; }
-:root[data-vp="phone"] .tl-headers { width: 118px; }
-:root[data-vp="phone"] .side { display: flex; }
-:root[data-vp="phone"] .side.left  { border: 0; border-top: 1px solid var(--border); }
-:root[data-vp="phone"] .side.right { border: 0; border-top: 1px solid var(--border); }
-:root[data-vp="phone"] .side .scroll { max-height: 46vh; }
-:root[data-vp="phone"] .timeline { min-height: 180px; }
-:root[data-vp="phone"] .launcher { padding: 22px 14px 40px; }
-:root[data-vp="phone"] .launcher-head h1 { font-size: 26px; }
-:root[data-vp="phone"] .launch-grid { grid-template-columns: 1fr; }
 
 /* ---- convert sheet ---- */
 .cv-back { position: fixed; inset: 0; z-index: 300; background: rgba(0,0,0,.6);

@@ -1,49 +1,49 @@
-// src/viewport.js — the ONE form-factor signal. Two awarenesses, your words: `phone`
-// (single-column) and `desktop` (landscape, multi-column). Everything keys off
-// :root[data-vp]; nothing else decides the form factor. (subsystem doctrine: one source of
-// truth, the layout is a projection of it.)
+// src/viewport.js — the device signal. CoolPro is a DESKTOP suite: one landscape, multi-column
+// layout, always. There is no "phone" form factor and no mobile column any more.
 //
-// We bank off the browser's "Desktop site" checkbox for free: enabling it widens the layout
-// viewport (~980px), which pushes our width past the break → `desktop`. Disabling it returns
-// the narrow viewport → `phone`. Plus an in-app toggle that forces either, persisted — so the
-// user is never stuck on the wrong one.
-const KEY = 'coolpro-view';                 // 'auto' | 'desktop' | 'phone'
-const BREAK = 820;                          // px: at/above = room for landscape (covers desktop-site ~980)
+// What survives is TOUCH AWARENESS for 2-in-1 / hybrid devices: we detect a coarse pointer and
+// stamp :root[data-touch="on"|"off"] so the chrome can enlarge hit targets (see the pointer:coarse
+// rules in app.css) without ever switching to a different layout. Long-press context menus and
+// touch-drag keep working on any device; the geometry never changes.
+//
+// The old form-factor exports (mode/toggle/isForced/preference/setPreference) are kept as thin
+// desktop-always shims so existing import sites don't break — the studio no longer has a mode.
 const subs = new Set();
-let pref = 'auto';
-try { pref = localStorage.getItem(KEY) || 'auto'; } catch (_) {}
 
-// Effective mode: an explicit override wins; otherwise it's the viewport width (which the
-// "Desktop site" toggle moves).
-export function mode() {
-  if (pref === 'desktop' || pref === 'phone') return pref;
-  const w = window.innerWidth || document.documentElement.clientWidth || 1024;
-  return w >= BREAK ? 'desktop' : 'phone';
+function detectTouch() {
+  try {
+    return (window.matchMedia && matchMedia('(pointer: coarse)').matches)
+      || 'ontouchstart' in window
+      || (navigator.maxTouchPoints || 0) > 0;
+  } catch (_) { return false; }
 }
-export function preference() { return pref; }
-export function isForced() { return pref !== 'auto'; }
+
+let _touch = detectTouch();
+export function hasTouch() { return _touch; }
 export function subscribe(fn) { subs.add(fn); return () => subs.delete(fn); }
 
-let _last = null;
 function apply() {
-  const m = mode();
-  if (m === _last) return;
-  _last = m;
-  document.documentElement.dataset.vp = m;
-  for (const fn of subs) { try { fn(m); } catch (_) {} }
+  const t = detectTouch();
+  const changed = t !== _touch;
+  _touch = t;
+  const R = document.documentElement;
+  R.dataset.vp = 'desktop';                 // legacy hook: the layout is always the desktop grid
+  R.dataset.touch = t ? 'on' : 'off';
+  if (changed) for (const fn of subs) { try { fn(t); } catch (_) {} }
 }
-
-export function setPreference(p) {
-  pref = (p === 'desktop' || p === 'phone') ? p : 'auto';
-  try { localStorage.setItem(KEY, pref); } catch (_) {}
-  _last = null; apply();
-}
-// Flip to the opposite of what's showing now (and make it sticky) — the in-app "Desktop view".
-export function toggle() { setPreference(mode() === 'desktop' ? 'phone' : 'desktop'); }
 
 export function initViewport() {
   apply();
-  let raf = 0;
-  window.addEventListener('resize', () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(apply); });
-  window.addEventListener('orientationchange', () => setTimeout(apply, 80));
+  // A hybrid can gain/lose its touch digitizer (dock/undock); react, but never reflow the layout.
+  try { matchMedia('(pointer: coarse)').addEventListener('change', apply); } catch (_) {
+    try { matchMedia('(pointer: coarse)').addListener(apply); } catch (_) {}
+  }
+  window.addEventListener('resize', apply, { passive: true });
 }
+
+// ---- desktop-always shims (a form factor no longer exists) --------------------------------
+export function mode() { return 'desktop'; }
+export function preference() { return 'desktop'; }
+export function isForced() { return false; }
+export function setPreference() {}
+export function toggle() {}

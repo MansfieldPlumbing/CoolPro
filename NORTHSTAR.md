@@ -4,7 +4,7 @@
 > per-PR. It exists so every refactor has a reference and nothing drifts back into being disjointed.
 
 CoolPro should be **more powerful than Krita on desktop and more libre than any cloud offering** —
-a single no-build, on-device, phone-first FOSS studio for video · audio · image · 3D.
+a single no-build, on-device, **desktop-first (touch-aware)** FOSS studio for video · audio · image · 3D.
 
 ## 1. One shell, panes do double-duty
 
@@ -26,7 +26,7 @@ is that shell. Each surface fills the same panes:
 
 **Surfaces (Editor / Paint / 3D) ≈ Resolve Pages / Affinity Personas / Blender Workspaces.**
 The flickpaint panes ≈ Blender areas that change editor-type. The top blind ≈ Resolve's Media Pool.
-We're porting a 20-year-proven model to a no-build, phone-first, FOSS browser app (the genuinely new
+We're porting a 20-year-proven model to a no-build, desktop-first, FOSS browser app (the genuinely new
 part; closest web precedents are Photopea and Figma).
 
 ## 2. Workflows are atomized verbs, composed in the drill-down
@@ -49,10 +49,11 @@ brush to clean up"), and selection refinement is shared by *all* of them. This i
 made literal: **behaviours are verbs on objects, registrable and composable.** Selection becomes
 **Google-Photos-shaped** (tap the subject, refine), because it's one atom every workflow reuses.
 
-## 3. The top bar: contextual + pinnable (because phones have no cut/paste)
+## 3. The top bar: a traditional menu bar, contextual + pinnable
 
-A phone has no good cut/paste, so the verbs you need must be **at the top, in thumb reach**, the
-moment they're relevant:
+The top chrome is a classic desktop **menu bar** (File · Edit · View · Help) with the surface
+switcher on the right — and it stays contextual, surfacing the verbs you need the moment they're
+relevant:
 
 - **Contextual by default** — the top tools change with what's selected / the active tool (Affinity's
   "context toolbar shows only relevant controls"). Make a selection → cut-to-layer · fill · erase ·

@@ -8,7 +8,7 @@ import { initPreview, play, pause, toggle, seek, toStart, toEnd, drawAt } from '
 import { subscribe as onViewport } from './viewport.js';
 import { initPanels, openExport } from './panels.js';
 import { initAddons } from './addons.js';
-import { attachContextMenu, openMenu } from './contextmenu.js';
+import { attachContextMenu, openMenu, isMenuOpen } from './contextmenu.js';
 import { initPWA } from './pwa.js';
 import * as CDN from './cdn.js';
 import { toast } from './hud.js';
@@ -23,6 +23,7 @@ function boot() {
   wireDeckMenu();
   wireProjections();
   wireTransport();
+  wireStageMenus();
   wireKeyboard();
   // PWA install/update + CDN package cache
   initPWA((s) => { if (s.canInstall !== undefined) { installAvail = s.canInstall; const b = $('#btnInstall'); if (b) b.hidden = !s.canInstall; } });
@@ -35,8 +36,8 @@ function boot() {
     if (r === 'project') $('#projName').value = S.state.project.name;
     renderStatus();
   });
-  // Form-factor change (phone ⇄ desktop): the editor's grid reflows, so the canvas-based
-  // timeline & preview must recompute against their new container widths.
+  // A 2-in-1 gaining/losing its touch digitizer can shift hit-target metrics; repaint the
+  // canvas-based timeline & preview so they stay crisp against any container change.
   onViewport(() => requestAnimationFrame(() => { renderTimeline(); drawAt(S.state.transport.time); }));
   renderBin(); renderTransport(); renderStatus();
 }
@@ -129,6 +130,40 @@ function binMenu(id) {
     { label: 'Convert…', icon: '⇄', disabled: !m.file, run: () => { if (m.file) import('./convert.js').then((c) => c.openConvert(m.file)); } },
     '-',
     { label: 'Remove from bin', icon: '🗑', danger: true, run: () => { S.removeMedia(id); toast('Removed from bin'); } },
+  ];
+}
+
+// ---- right-click menus on the editor stage (expansive context menus everywhere) ----------
+// The preview pasteboard and the media dropzone each grow a rich verb menu — right-click on
+// desktop, long-press on a 2-in-1's touchscreen (both handled by the shared contextmenu atom).
+function wireStageMenus() {
+  const board = document.querySelector('.viewport.pasteboard');
+  if (board) attachContextMenu(board, () => stageMenu());
+  const dz = $('#dropzone');
+  if (dz) attachContextMenu(dz, () => [
+    { label: 'Add media…', icon: '📂', run: () => $('#filePicker').click() },
+  ]);
+  // Right-clicking anywhere on the left media panel (not on a bin item) offers Add media too.
+  const left = document.querySelector('#surface-editor .side.left');
+  if (left) attachContextMenu(left, (e) => e.target.closest('.item') ? [] : [
+    { label: 'Add media…', icon: '📂', run: () => $('#filePicker').click() },
+  ]);
+}
+function stageMenu() {
+  const click = (id) => () => document.getElementById(id)?.click();
+  return [
+    { label: S.state.transport.playing ? 'Pause' : 'Play', icon: S.state.transport.playing ? '⏸' : '▶', run: toggle },
+    { label: 'To start', icon: '⏮', run: toStart },
+    { label: 'To end', icon: '⏭', run: toEnd },
+    '-',
+    { label: 'Fit to view', icon: '⊡', run: click('pvZoomFit') },
+    { label: 'Zoom in', icon: '＋', run: click('pvZoomIn') },
+    { label: 'Zoom out', icon: '－', run: click('pvZoomOut') },
+    '-',
+    { label: 'Split at playhead', icon: '⎯', run: splitAtPlayhead },
+    { label: 'Delete selected clip', icon: '🗑', danger: true, run: deleteSelected },
+    '-',
+    { label: 'Export…', icon: '⤓', run: openExport },
   ];
 }
 

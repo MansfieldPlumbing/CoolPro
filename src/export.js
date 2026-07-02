@@ -165,7 +165,7 @@ export function download(blob, name) {
   setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }
 
-// Phone-first "save": hand the file to the OS share sheet (→ Files, messaging, anywhere) when the
+// "Save via share": hand the file to the OS share sheet (→ Files, messaging, anywhere) when the
 // browser can share files; otherwise fall back to a download. Returns 'shared'|'cancelled'|'downloaded'.
 export async function shareOrDownload(blob, name) {
   try {

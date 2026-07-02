@@ -23,9 +23,9 @@
   --fg-rgb: 255,255,255; /* invertible foreground — light theme flips this to ink */
   --fg: #ffffff;
   --bg: #101012;                          /* neutral near-black — no blue/purple cast */
-  --panel: rgba(30, 31, 38, 0.66);        /* acrylic: more opaque, less see-through */
+  --panel: rgba(30, 31, 38, 0.5);         /* acrylic: thinner tint, more see-through, still blurry */
   --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
-  --dock: rgba(24, 24, 27, 0.92);         /* opaque docker surface (desktop) */
+  --dock: rgba(24, 24, 27, 0.8);          /* docker surface — a little more glass than before */
   --dock-head: rgba(255,255,255,0.035);   /* docker title-bar tint */
   --indigo:   #2f6bff;   /* clean blue highlight (was cobalt-indigo) */
   --indigo-2: #6aa1ff;   /* lighter blue */
@@ -60,8 +60,8 @@ h2, h3 { margin: 0; }
   background-image: var(--noise), var(--spray), var(--gloss);
   background-size: 140px 140px, auto, auto;            /* tile the grain */
   background-blend-mode: soft-light, normal, normal;    /* grain reads as subtle texture */
-  backdrop-filter: blur(30px) saturate(180%);
-  -webkit-backdrop-filter: blur(30px) saturate(180%);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
   border: 1px solid var(--line);
   box-shadow: 0 20px 50px -10px rgba(0,0,0,0.70), inset 0 1px 0 rgba(var(--fg-rgb),0.12);
 }
@@ -140,7 +140,7 @@ body[data-view="bottom"] .panel.bottom { transform: none; }
   .tab.left, .tab.right { display: none; }           /* panels are docked, no edge grips */
   #stick { display: none !important; }               /* joystick is a touch affordance */
   #stage { transform: none !important; filter: none !important; }  /* no parallax/dim when docked */
-  #top { left: 248px; right: 290px; width: auto; max-width: none; transform: none; border-radius: 0; border-bottom: 1px solid var(--line); }
+  #chev { display: none; }   /* the pull-down blind is a touch fallback; on desktop the menu bar owns File/Edit/View */
   .panel h2.title { margin: 2px 0 12px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }   /* docker title bar */
 }
 
@@ -150,9 +150,32 @@ body[data-view="bottom"] .panel.bottom { transform: none; }
 #blind { overflow: hidden; height: 0; transition: height .35s cubic-bezier(.2,.85,.25,1); }
 body[data-view="top"] #blind { height: 168px; }
 .blind-inner { padding: 14px; }
-.deck { height: 56px; border-top: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; padding: 0 14px; gap: 8px; }
+.deck { height: 52px; border-top: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; padding: 0 12px; gap: 8px; }
 .chev { height: 24px; border-top: 1px solid var(--line); display: flex; align-items: center; justify-content: center; cursor: pointer; }
 .chev:hover { background: rgba(var(--fg-rgb),0.05); }
+
+/* ===== Traditional menu bar (File · Edit · View) — the guest top bar ===== */
+.menubar-row { display: flex; align-items: center; gap: 2px; }
+.menubtn { height: 32px; padding: 0 12px; border-radius: 8px; color: rgba(var(--fg-rgb),0.85);
+  font-size: 13px; display: inline-flex; align-items: center; transition: background .12s, color .12s; }
+.menubtn:hover, .menubtn.on { background: rgba(var(--fg-rgb),0.12); color: var(--fg); }
+.menulist { left: 0; top: 100%; margin-top: 8px; min-width: 208px; padding: 6px; border-radius: 12px; }
+.menurow { display: flex; align-items: center; gap: 11px; width: 100%; text-align: left; padding: 9px 11px;
+  border-radius: 8px; color: var(--fg); font-size: 13px; transition: background .12s; }
+.menurow:hover { background: rgba(var(--fg-rgb),0.12); }
+.menurow .ic { width: 18px; height: 18px; font-size: 16px; color: rgba(var(--fg-rgb),0.6); }
+.menurow.danger { color: #ff6b6b; }
+.menurow.danger:hover { background: rgba(255,107,107,0.15); }
+.menurow.danger .ic { color: #ff6b6b; }
+.menusep { height: 1px; margin: 5px 6px; background: rgba(var(--fg-rgb),0.12); }
+/* On desktop the top bar DOCKS full-width between the side panels — a real menu bar, not a
+   floating pill. This sits after the base #top rule so it wins the specificity tie. */
+@media (min-width: 900px) {
+  #top { left: 248px; right: 290px; width: auto; max-width: none; transform: none;
+    border-radius: 0; border-bottom: 1px solid var(--line); }
+  #top .deck { justify-content: flex-start; gap: 14px; }
+  #top .deck > .row:last-child { margin-left: auto; }   /* push the tool row to the right edge */
+}
 
 /* ===== Common controls ===== */
 .row { display: flex; align-items: center; gap: 8px; }
@@ -326,8 +349,8 @@ input:focus { border-color: rgba(var(--fg-rgb),0.3); }
     --fg-rgb: 24,27,38;            /* ink */
     --fg: #12151d;
     --bg: #e8ecf3;
-    --panel: rgba(255,255,255,0.74);
-    --dock: rgba(247,249,252,0.95);
+    --panel: rgba(255,255,255,0.6);
+    --dock: rgba(247,249,252,0.9);
     --dock-head: rgba(0,0,0,0.03);
     --spray: radial-gradient(120% 140% at 20% -10%, rgba(41,84,212,0.10), transparent 55%);
   }
@@ -341,8 +364,8 @@ input:focus { border-color: rgba(var(--fg-rgb),0.3); }
   --fg-rgb: 24,27,38;
   --fg: #12151d;
   --bg: #e8ecf3;
-  --panel: rgba(255,255,255,0.52);
-  --dock: rgba(247,249,252,0.95);
+  --panel: rgba(255,255,255,0.44);
+  --dock: rgba(247,249,252,0.9);
   --dock-head: rgba(0,0,0,0.03);
   --spray: radial-gradient(120% 140% at 20% -10%, rgba(41,84,212,0.10), transparent 55%);
 }

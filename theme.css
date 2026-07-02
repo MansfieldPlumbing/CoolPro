@@ -26,14 +26,14 @@
      COHESION IS A SINGLE KNOB: --transparency (0..1, driven by the Settings opacity slider) is the
      one dial that thins or thickens every acrylic surface in the suite at once. --glass folds it in. */
   --mica-rgb:    20 22 28;
-  --mica-opacity: .72;
+  --mica-opacity: .5;    /* more acrylic: thinner tint, you see more through the glass */
   --transparency: 1;
   --glass: rgba(var(--mica-rgb), calc(var(--mica-opacity) * var(--transparency)));
 
   /* acrylic material — flickpaint's .mica-panel recipe, ported to host tokens so the studio chrome
-     (taskbar, menus, drawers) wears the exact same frosted glass as the paint panes. One recipe,
-     one knob. */
-  --mica-blur: 30px;
+     (menu bar, menus, drawers) wears the exact same frosted glass as the paint panes. One recipe,
+     one knob. Less opaque than before, but kept a little blurry so text stays legible over it. */
+  --mica-blur: 24px;
   --mica-noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
   --mica-spray: radial-gradient(120% 140% at 20% -10%, rgba(255,255,255,0.05), transparent 55%);
   --mica-gloss: linear-gradient(180deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.02) 18%, transparent 40%);
@@ -51,6 +51,7 @@
   --radius: 8px;
   --radius-sm: 5px;
   --r-shell: 46px;      /* shell app-switcher bar height */
+  --r-menubar: 40px;    /* top menu-bar height (desktop chrome) */
   --r-bar: 48px;        /* editor command-ribbon height */
   --r-status: 26px;     /* editor status bar height */
   --r-rail: 56px;       /* timeline ruler height */
