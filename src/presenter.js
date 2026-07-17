@@ -50,6 +50,9 @@ export class GuestPresenter extends UiObject {
       f.src = this.ctx.registry.contentUrl(this.rec);
       this.frame = f;
       host.appendChild(f);
+      // Signal to the guest that it's hosted inside CoolPro Shell (single app, contextual menu bar)
+      // This lets guests hide their duplicate menu bars via CSS
+      document.documentElement.dataset.hosted = 'on';
       // Listen to this guest — only OUR frame. Two inbound message kinds today:
       //   menu-context   — the verbs it contributes (shared/presenter.js SDK)
       //   surface-ready  — it booted; flush anything the Shell queued for it

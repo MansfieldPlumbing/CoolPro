@@ -8,10 +8,14 @@ let reg = null;
 let deferredPrompt = null;
 let reloading = false;
 let onState = () => {};   // UI hook (install availability / update availability)
+let updateCheckOptIn = null;  // user's opt-in preference for startup update checks
 
 export function initPWA(stateHook) {
   if (typeof stateHook === 'function') onState = stateHook;
   if (!('serviceWorker' in navigator)) return;
+  
+  // Load opt-in preference for startup update checks
+  try { updateCheckOptIn = localStorage.getItem('coolpro-update-optin') === 'on'; } catch (_) {}
 
   navigator.serviceWorker.register('./sw.js', { scope: './' }).then((r) => {
     reg = r;
@@ -25,6 +29,18 @@ export function initPWA(stateHook) {
     // periodic + focus-based update checks
     setInterval(() => r.update().catch(() => {}), 60 * 60 * 1000);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) r.update().catch(() => {}); });
+    
+    // Lazy, non-blocking startup update check (opt-in only)
+    if (updateCheckOptIn) {
+      queueMicrotask(() => {
+        // Best-effort: fire-and-forget, won't block boot or affect UX if offline
+        r.update().then(() => {
+          if (r.waiting && navigator.serviceWorker.controller && !banner) {
+            showUpdate();
+          }
+        }).catch(() => {});
+      });
+    }
   }).catch(() => {});
 
   navigator.serviceWorker.addEventListener('controllerchange', () => {
@@ -56,6 +72,14 @@ export async function checkForUpdates() {
   toast('You’re on the latest version.', { ms: 2200 });
   return false;
 }
+
+// Opt-in toggle for startup update checks
+export function setUpdateOptIn(enabled) {
+  updateCheckOptIn = enabled;
+  try { localStorage.setItem('coolpro-update-optin', enabled ? 'on' : 'off'); } catch (_) {}
+  toast(enabled ? 'Will check for updates at startup' : 'Startup update checks disabled', { ms: 2000 });
+}
+export function getUpdateOptIn() { return !!updateCheckOptIn; }
 
 function applyUpdate() {
   if (reg?.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });

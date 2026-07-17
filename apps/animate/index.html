@@ -8,6 +8,8 @@
 <!-- Shared hand-made glass chrome — the same flickpaint shell paint & 3D wear. -->
 <link rel="stylesheet" href="../../vendor/ui/flickpaint-ui.css">
 <style>
+  /* Hide the in-app menu bar when hosted inside CoolPro Shell (single app, contextual menu bar) */
+  :root[data-hosted="on"] #top[data-hide-hosted] { display: none !important; }
   /* animate-only bits the shared chrome doesn't define */
   body { background: radial-gradient(120% 90% at 50% 0%, #1c1c1f 0%, #141416 55%, #101012 100%); }
   @media (prefers-color-scheme: light) {
@@ -83,8 +85,8 @@
     </div>
   </div>
 
-  <!-- Top window blind + deck -->
-  <div id="top" class="mica-panel">
+  <!-- Top window blind + deck (hidden when hosted: CoolPro Shell provides the menu bar) -->
+  <div id="top" class="mica-panel" data-hide-hosted>
     <div id="blind"><div class="blind-inner">
       <h2 class="title">flickmotion</h2>
       <p class="muted" style="font-size:11px;margin-top:8px;line-height:1.5">
