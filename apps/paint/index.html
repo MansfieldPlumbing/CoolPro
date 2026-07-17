@@ -1201,18 +1201,18 @@ function buildTop() {
     </div>
     <input type="file" id="file-input" accept="image/*,.flick,.flickproj,application/json" style="display:none">`;
 
-  // The top bar is a TRADITIONAL menu bar — File · Edit · View pull-downs on the left, the quick
-  // tool row on the right. The menu rows proxy the (still-wired) buttons in the blind + toolbar by
-  // id (data-proxy), so every existing action keeps its single source of wiring.
+  // The top bar is a TRADITIONAL menu bar — File · Edit · View pull-downs on the left.
+  // Desktop-first design: no thumbstick, tool shortcuts live in dockers.
   $('#deck').innerHTML = `
     <div class="menubar-row">
       <a class="iconbtn" href="../" title="Home" style="text-decoration:none;font-size:15px;width:34px;height:34px">🏠</a>
       <div style="position:relative">
         <button class="menubtn" id="m-file">File</button>
         <div class="dropdown mica-panel menulist" id="dd-file">
-          <button class="menurow" data-proxy="f-new">${icon('fileplus')}<span>New</span></button>
-          <button class="menurow" data-proxy="f-open">${icon('upload')}<span>Open…</span></button>
-          <button class="menurow" data-proxy="f-save">${icon('save')}<span>Save</span></button>
+          <button class="menurow" data-proxy="f-new">${icon('fileplus')}<span>New</span><span class="shortcut">Ctrl+N</span></button>
+          <button class="menurow" data-proxy="f-open">${icon('upload')}<span>Open…</span><span class="shortcut">Ctrl+O</span></button>
+          <div class="menusep"></div>
+          <button class="menurow" data-proxy="f-save">${icon('save')}<span>Save</span><span class="shortcut">Ctrl+S</span></button>
           <button class="menurow" data-proxy="f-export">${icon('download')}<span>Export…</span></button>
           <div class="menusep"></div>
           <button class="menurow" data-proxy="f-assets"><span class="ic">🖼️</span><span>Assets…</span></button>
@@ -1221,8 +1221,8 @@ function buildTop() {
       <div style="position:relative">
         <button class="menubtn" id="m-edit">Edit</button>
         <div class="dropdown mica-panel menulist" id="dd-edit">
-          <button class="menurow" data-proxy="d-undo">${icon('undo')}<span>Undo</span></button>
-          <button class="menurow" data-proxy="d-redo">${icon('redo')}<span>Redo</span></button>
+          <button class="menurow" data-proxy="d-undo">${icon('undo')}<span>Undo</span><span class="shortcut">Ctrl+Z</span></button>
+          <button class="menurow" data-proxy="d-redo">${icon('redo')}<span>Redo</span><span class="shortcut">Ctrl+Shift+Z</span></button>
           <div class="menusep"></div>
           <button class="menurow danger" data-proxy="r-clear">${icon('trash')}<span>Clear all layers</span></button>
         </div>
@@ -1232,8 +1232,6 @@ function buildTop() {
         <div class="dropdown mica-panel menulist" id="dd-view">
           <button class="menurow" data-proxy="r-reset">${icon('maximize')}<span>Reset view</span></button>
           <button class="menurow" data-proxy="d-picker">${icon('pipette')}<span>Eyedropper</span></button>
-          <div class="menusep"></div>
-          <button class="menurow" data-proxy="d-stick">${icon('gamepad')}<span>Toggle joystick</span></button>
         </div>
       </div>
     </div>
@@ -1266,7 +1264,6 @@ function buildTop() {
           <div class="row" style="gap:8px"><span class="mono" id="hex-val" style="font-size:11px"></span><button class="iconbtn" id="hex-copy" style="width:26px;height:26px">${icon('copy')}</button></div>
         </div>
       </div>
-      <button class="iconbtn" id="d-stick" title="Toggle Joystick" style="width:34px;height:34px;border:1px solid rgba(255,255,255,0.06)">${icon('gamepad')}</button>
     </div>`;
 
   // file ops
