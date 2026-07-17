@@ -154,8 +154,7 @@ function surfaceSwitchItems() {
 
 function helpMenu() {
   return [
-    { label: 'About CoolPro', icon: 'ℹ', run: () => import('./hud.js').then((h) =>
-      h.toast('CoolPro — a no-build, on-device FOSS creative suite: video · audio · image · 3D · animation. Runs entirely in your browser.', { ms: 5200 })) },
+    { label: 'About CoolPro', icon: 'ℹ', run: () => window.open('https://github.com/yourusername/coolpro', '_blank') },
     { label: 'Keyboard: Space play · S split · Del delete', icon: '⌨', disabled: true },
   ];
 }
