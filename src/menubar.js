@@ -154,7 +154,7 @@ function surfaceSwitchItems() {
 
 function helpMenu() {
   return [
-    { label: 'About CoolPro', icon: 'ℹ', run: () => window.open('https://github.com/yourusername/coolpro', '_blank') },
+    { label: 'About CoolPro', icon: 'ℹ', run: () => window.open('https://github.com/CoolProFOSS/coolpro', '_blank') },
     { label: 'Keyboard: Space play · S split · Del delete', icon: '⌨', disabled: true },
   ];
 }
