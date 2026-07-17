@@ -1,19 +1,70 @@
-# dev/test tooling (the app ships dependency-free; Playwright is dev-only)
+# Compiled and build artifacts
+*.pyc
+__pycache__/
+*.o
+*.obj
+*.class
+*.exe
+*.dll
+*.so
+*.a
+*.out
+
+# Dependencies
+.venv/
+venv/
 node_modules/
-package.json
-package-lock.json
+.mypy_cache/
+.pytest_cache/
+dist/
+build/
+target/
+.gradle/
 
-# local smoke-test scaffolding
-.smoke.mjs
-.smoke2.mjs
-.dbg.mjs
-.gen-icons.mjs
-.ff-exp.mjs
-.ff-exp2.mjs
-.ff-exp3.mjs
-.ff-exp4.mjs
-.ff-dbg.mjs
-.scratch/
+# Logs and temp files
+*.log
+*.tmp
+*.swp
+*.swo
 
-# os
+# Environment
+.env
+.env.local
+*.env.*
+
+# Editors
+.vscode/
+.idea/
+
+# System files
 .DS_Store
+Thumbs.db
+
+# Coverage
+coverage/
+htmlcov/
+.coverage
+
+# Compressed files
+*.zip
+*.gz
+*.tar
+*.tgz
+*.bz2
+*.xz
+*.7z
+*.rar
+*.zst
+*.lz4
+*.lzh
+*.cab
+*.arj
+*.rpm
+*.deb
+*.Z
+*.lz
+*.lzo
+*.tar.gz
+*.tar.bz2
+*.tar.xz
+*.tar.zst
