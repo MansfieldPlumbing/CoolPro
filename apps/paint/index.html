@@ -48,10 +48,6 @@
 </script>
 
 <link rel="stylesheet" href="../../vendor/ui/flickpaint-ui.css"><!-- shared glass chrome; cobalt refresh lives here -->
-<style>
-  /* Hide the in-app menu bar when hosted inside CoolPro Shell (single app, contextual menu bar) */
-  :root[data-hosted="on"] #top[data-hide-hosted] { display: none !important; }
-</style>
 </head>
 <body data-view="center">
 <div id="root">
@@ -72,8 +68,8 @@
     <div class="tab right mica-panel" data-toggle="right" title="Layers"><span class="ic" data-icon="gripv"></span></div>
   </div>
 
-  <!-- Top window blind (hidden when hosted: CoolPro Shell provides the menu bar) -->
-  <div id="top" class="mica-panel" data-hide-hosted>
+  <!-- Top window blind (CoolPro Shell provides the menu bar) -->
+  <div id="top" class="mica-panel">
     <div id="blind"><div class="blind-inner" id="blind-content"></div></div>
     <div class="deck" id="deck"></div>
     <div class="chev" id="chev" title="Pull down / slide up"><span class="ic" data-icon="griph"></span></div>
@@ -256,9 +252,6 @@ const CATALOG = {
     { value: 'Burn', name: 'Color Burn', description: 'Rich, burned shadows' },
   ],
 };
-
-// Detect if we're hosted inside the CoolPro Shell (single app, different views)
-const IS_HOSTED = !!(window.__SUBSYSTEM_PROVIDER__);
 
 function bootProvider() {
   const injected = window.__SUBSYSTEM_PROVIDER__;

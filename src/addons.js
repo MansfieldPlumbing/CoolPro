@@ -42,6 +42,7 @@ async function render() {
   const pkgs = CDN.list();
   const est = await CDN.estimate();
   const usage = est ? `${fmtBytes(est.usage)} used of ${fmtBytes(est.quota)}` : `${fmtBytes(CDN.totalBytes())} cached`;
+  const updateOptIn = PWA.getUpdateOptIn();
 
   body.innerHTML = `
     <!-- app / PWA -->
@@ -51,6 +52,12 @@ async function render() {
         <button class="btn ${PWA.canInstall() ? 'primary' : ''}" id="aoInstall" ${PWA.canInstall() ? '' : 'disabled'}>Install</button>
         <button class="btn ghost" id="aoUpdate">Check updates</button>
       </div>
+    </div>
+
+    <!-- Startup update check toggle -->
+    <div class="fx-row" style="align-items:center;margin-top:12px">
+      <div class="t" style="flex:1"><b>Check for updates at startup</b><span>Automatically check for new versions when CoolPro starts.</span></div>
+      <button class="toggle ${updateOptIn ? 'active' : ''}" id="aoUpdateOptIn" title="Toggle startup update checks"></button>
     </div>
 
     <div class="side" style="background:transparent"><h3 style="padding-left:0">CDN packages</h3></div>
@@ -82,6 +89,11 @@ async function render() {
   // wire
   $('#aoInstall', back).addEventListener('click', PWA.promptInstall);
   $('#aoUpdate', back).addEventListener('click', PWA.checkForUpdates);
+  $('#aoUpdateOptIn', back).addEventListener('click', () => {
+    const newVal = !PWA.getUpdateOptIn();
+    PWA.setUpdateOptIn(newVal);
+    render();
+  });
   $('#aoAdd', back).addEventListener('click', async () => {
     try {
       await CDN.add({ name: $('#aoName', back).value.trim(), url: $('#aoUrl', back).value.trim(), type: $('#aoType', back).value });
